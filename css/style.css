@@ -587,6 +587,11 @@ a { color: var(--primary); text-decoration: none; }
   border-bottom: 1px solid #e4ecea;
 }
 .update-sheet .changes li:last-child { border-bottom: none; }
+.update-sheet .bc-body {
+  font-size: 14.5px; line-height: 1.6; color: var(--text);
+  background: #f4f8f7; border-radius: 14px; padding: 13px 15px;
+  margin-bottom: 16px; text-align: start; white-space: pre-wrap;
+}
 .update-sheet .note {
   font-size: 12px; color: var(--text-soft); line-height: 1.5; margin: 12px 4px 4px;
 }

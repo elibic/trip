@@ -34,6 +34,24 @@ export function currentTrip() {
   return latestTrip;
 }
 
+/* ---------- הודעת שידור לכל המכשירים ----------
+   יושבת תחת trips/ כדי להיכנס לחוקי האבטחה הקיימים (trips/$tripId),
+   ובשם שמתחיל ב-__ כדי שלא תיראה אף פעם כטיול (מסך הבית קורא מ-tripsIndex). */
+
+export const BROADCAST_PATH = 'trips/__broadcast';
+
+export function subscribeBroadcast(cb) {
+  return subscribe(BROADCAST_PATH, cb);
+}
+
+export function publishBroadcast(message) {
+  return setAt(BROADCAST_PATH, message);
+}
+
+export function clearBroadcast() {
+  return removeAt(BROADCAST_PATH);
+}
+
 /* ---------- טיולים ---------- */
 
 export async function createTrip({ name, startDate, endDate }) {
