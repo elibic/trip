@@ -29,8 +29,14 @@ function renderScreen(icon, title, paragraphs, withRetry = false) {
       <div class="big">${icon}</div>
       <h1>${title}</h1>
       ${paragraphs.map((p) => `<p>${p}</p>`).join('')}
-      ${withRetry ? '<button class="btn" style="margin-top:14px" onclick="location.reload()">ניסיון חוזר</button>' : ''}
+      ${withRetry ? '<button class="btn" id="retry-btn" style="margin-top:14px">ניסיון חוזר</button>' : ''}
     </div>`;
+
+  // בטעינה שנכשלה — רענון עמוק, שלא ניתקע על גרסה שבורה במטמון
+  view.querySelector('#retry-btn')?.addEventListener('click', async () => {
+    const { hardRefresh } = await import('./update.js');
+    hardRefresh();
+  });
 }
 
 if ('serviceWorker' in navigator) {

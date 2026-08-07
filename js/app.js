@@ -1,6 +1,7 @@
 import * as store from './store.js';
 import { el, clear, setRendering } from './ui.js';
 import { initInstallBanner } from './install.js';
+import { initUpdateChecker } from './update.js';
 import { renderHome } from './views/home.js';
 import { renderGate, renderFamilySwitcher } from './views/trip.js';
 import { renderGear } from './views/gear.js';
@@ -180,3 +181,4 @@ unsubIndex = store.subscribeIndex((data) => {
 window.addEventListener('hashchange', onRouteChange);
 onRouteChange();
 initInstallBanner();
+initUpdateChecker();

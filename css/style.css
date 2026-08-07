@@ -573,6 +573,34 @@ a { color: var(--primary); text-decoration: none; }
 .install-banner .btn { background: var(--accent); padding: 9px 14px; min-height: 38px; font-size: 14px; }
 .install-banner .close { font-size: 18px; opacity: .6; padding: 6px; }
 
+/* ===== חלון עדכון גרסה ===== */
+.modal.update-modal { text-align: center; }
+.update-sheet .ico { font-size: 46px; }
+.update-sheet h2 { font-size: 21px; margin: 6px 0 2px; }
+.update-sheet .ver { font-size: 13px; color: var(--text-soft); margin-bottom: 14px; }
+.update-sheet .changes {
+  list-style: none; text-align: start;
+  background: #f4f8f7; border-radius: 14px; padding: 12px 14px; margin-bottom: 16px;
+}
+.update-sheet .changes li {
+  font-size: 14px; line-height: 1.55; padding: 5px 0;
+  border-bottom: 1px solid #e4ecea;
+}
+.update-sheet .changes li:last-child { border-bottom: none; }
+.update-sheet .note {
+  font-size: 12px; color: var(--text-soft); line-height: 1.5; margin: 12px 4px 4px;
+}
+
+.version-footer {
+  text-align: center; font-size: 12px; color: var(--text-soft);
+  padding: 26px 0 6px;
+}
+.link-btn {
+  color: var(--primary); font-weight: 700; font-size: 12px;
+  text-decoration: underline; padding: 4px;
+}
+.link-btn:disabled { color: var(--text-soft); text-decoration: none; }
+
 /* ===== מסך הגדרה חסרה / שגיאה ===== */
 .setup-screen { text-align: center; padding: 40px 18px; }
 .setup-screen .big { font-size: 54px; margin-bottom: 12px; }

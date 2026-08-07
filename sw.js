@@ -26,6 +26,8 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   // בקשות Firebase / גופנים — ישר לרשת, בלי cache
   if (url.origin !== location.origin) return;
+  // קובץ הגרסה חייב להגיע תמיד מהרשת, אחרת לא נדע שיש עדכון
+  if (url.pathname.endsWith('/version.json')) return;
 
   e.respondWith(
     fetch(e.request)

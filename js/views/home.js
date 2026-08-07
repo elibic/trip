@@ -1,5 +1,6 @@
 import { el, openModal, emptyState, toast } from '../ui.js';
 import { createTrip, fmtRange } from '../store.js';
+import { APP_VERSION, checkNow, hardRefresh } from '../update.js';
 
 export function renderHome(view, { index, navigate }) {
   const trips = Object.entries(index || {})
@@ -24,6 +25,24 @@ export function renderHome(view, { index, navigate }) {
       ));
     }
     view.append(el('button', { class: 'fab no-tabs', onclick: openNewTripModal }, '＋ טיול חדש'));
+  }
+
+  view.append(versionFooter());
+
+  function versionFooter() {
+    const label = el('span', {}, `גרסה ${APP_VERSION}`);
+    const btn = el('button', { class: 'link-btn', onclick: refresh }, 'בדיקת עדכון ורענון');
+    return el('div', { class: 'version-footer' }, label, ' · ', btn);
+
+    async function refresh() {
+      btn.disabled = true;
+      btn.textContent = 'בודקים…';
+      const info = await checkNow();
+      // אם נמצאה גרסה חדשה — המודאל כבר נפתח; אחרת מרעננים בכל מקרה
+      if (info && info.version !== APP_VERSION) { btn.disabled = false; btn.textContent = 'בדיקת עדכון ורענון'; return; }
+      toast('מרעננים לגרסה העדכנית…');
+      await hardRefresh();
+    }
   }
 
   function openNewTripModal() {
