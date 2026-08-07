@@ -1,10 +1,10 @@
-import { el, openModal, confirmDialog, toast, famChip, quickAddRow } from '../ui.js';
+import { el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab } from '../ui.js';
 import {
   addGearItem, updateGearItem, deleteGearItem,
   setGearChecked, claimShared, setPacked,
 } from '../store.js';
 import {
-  GEAR_CATEGORIES, knownCategories, groupByCategory, categoryChip,
+  GEAR_CATEGORIES, knownCategories, groupByCategory, categoryChip, rowCategoryChip,
 } from '../categories.js';
 
 // הקטגוריה והמצב הפרטי שנבחרו לשורת ההוספה — נשמרים בין רינדורים
@@ -13,8 +13,32 @@ const addState = {
   perFamily: { category: null, isPrivate: false },
 };
 
-export function renderGear(view, ctx) {
+/* טאב "ציוד אישי" — מה שכל משפחה מביאה לעצמה */
+export function renderPersonalGear(view, ctx) {
+  renderGearList(view, ctx, {
+    type: 'perFamily',
+    hint: '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה — סמנו כשארזתם',
+    placeholder: 'אוהל, שק"שים…',
+    emptyHint: '💡 כותבים פריט ולוחצים Enter — אפשר להמשיך לכתוב עוד. '
+      + 'בכפתור הקטגוריה שליד השדה בוחרים לאן ייכנסו הפריטים החדשים, '
+      + 'ובכפתור 🔒 מסמנים פריט שרק אתם תראו.',
+  });
+}
+
+/* טאב "ציוד לכולם" — פריטים שמשפחה אחת מביאה עבור כולם */
+export function renderSharedGear(view, ctx) {
+  renderGearList(view, ctx, {
+    type: 'shared',
+    hint: '🤝 משפחה אחת מביאה עבור כולם — לחצו "אנחנו נביא!"',
+    placeholder: 'מנגל, צידנית גדולה…',
+    emptyHint: '💡 כותבים פריט ולוחצים Enter. כל משפחה יכולה לקחת על עצמה פריטים '
+      + 'בכפתור "אנחנו נביא!", וכולם רואים מי אחראי על מה.',
+  });
+}
+
+function renderGearList(view, ctx, opts) {
   const { tripId, trip, myFamilyId } = ctx;
+  const { type, hint, placeholder, emptyHint } = opts;
   const families = trip.families || {};
 
   const all = Object.entries(trip.gear || {})
@@ -24,51 +48,31 @@ export function renderGear(view, ctx) {
   const visible = all.filter(([, g]) => !g.private || g.ownerFamilyId === myFamilyId);
   const categories = knownCategories(visible);
 
-  renderSection({
-    type: 'shared',
-    items: visible.filter(([, g]) => g.type === 'shared'),
-    title: '🤝 ציוד משותף',
-    hint: 'משפחה אחת מביאה עבור כולם',
-    placeholder: 'מנגל, צידנית גדולה…',
-    row: sharedRow,
-  });
+  const items = type === 'shared'
+    ? visible.filter(([, g]) => g.type === 'shared')
+    : visible.filter(([, g]) => g.type !== 'shared');
+  const row = type === 'shared' ? sharedRow : perFamilyRow;
+  const addKey = `gear-${type}-${tripId}`;
 
-  renderSection({
-    type: 'perFamily',
-    items: visible.filter(([, g]) => g.type !== 'shared'),
-    title: '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה',
-    hint: 'סמנו כשארזתם',
-    placeholder: 'אוהל, שק"שים…',
-    row: perFamilyRow,
-  });
+  view.append(el('div', { class: 'tab-hint' }, hint));
 
-  if (all.length === 0) {
-    view.append(el('p', { class: 'list-hint' },
-      '💡 כותבים פריט ולוחצים Enter — אפשר להמשיך לכתוב עוד. ',
-      'בכפתור הקטגוריה בוחרים לאיזו קטגוריה הפריטים החדשים ייכנסו.'));
-  }
+  const card = el('div', { class: 'card' });
+  card.append(buildAddRow({ type, placeholder }));   // ההוספה בראש — לא צריך לגלול
 
-  /* ---------- מקטע ---------- */
-
-  function renderSection({ type, items, title, hint, placeholder, row }) {
-    view.append(el('div', { class: 'section-title' }, title, el('span', { class: 'hint' }, hint)));
-
-    const card = el('div', { class: 'card' });
-    const groups = groupByCategory(items);
-
-    for (const [category, list] of groups) {
-      if (groups.length > 1) {
-        card.append(el('div', { class: 'cat-head' },
-          el('span', { class: 'nm' }, category),
-          el('span', { class: 'count' }, list.length),
-        ));
-      }
-      for (const [itemId, item] of list) card.append(row(itemId, item));
+  const groups = groupByCategory(items);
+  for (const [category, list] of groups) {
+    if (groups.length > 1) {
+      card.append(el('div', { class: 'cat-head' },
+        el('span', { class: 'nm' }, category),
+        el('span', { class: 'count' }, list.length),
+      ));
     }
-
-    card.append(buildAddRow({ type, placeholder }));
-    view.append(card);
+    for (const [itemId, item] of list) card.append(row(itemId, item));
   }
+  view.append(card);
+
+  if (items.length === 0) view.append(el('p', { class: 'list-hint' }, emptyHint));
+  else view.append(addFab(addKey, 'פריט'));
 
   function buildAddRow({ type, placeholder }) {
     const st = addState[type];
@@ -135,7 +139,7 @@ export function renderGear(view, ctx) {
       el('div', { class: 'grow' },
         el('div', { class: 'name', style: item.packed ? 'text-decoration:line-through;opacity:.6' : '' },
           item.name),
-        notes ? el('div', { class: 'sub' }, notes) : null,
+        el('div', { class: 'sub' }, catChipFor(itemId, item), notes ? ` ${notes}` : ''),
       ),
       action,
       menuBtn(itemId, item),
@@ -149,19 +153,21 @@ export function renderGear(view, ctx) {
     let sub;
     if (item.private) {
       sub = el('div', { class: 'sub' },
+        catChipFor(itemId, item),
         el('span', { class: 'private-badge' }, '🔒 פרטי'),
-        item.notes ? ` · ${item.notes}` : '');
+        item.notes ? ` ${item.notes}` : '');
     } else {
       const famIds = Object.keys(families);
       const doneCount = famIds.filter((id) => checked[id]).length;
       sub = el('div', { class: 'sub' },
+        catChipFor(itemId, item),
         el('span', { class: 'dots' },
           famIds.map((id) => el('span', {
             class: `dot${checked[id] ? ' on' : ''}`,
             style: `background:${families[id].color}`,
             title: families[id].name,
           }))),
-        ` ${doneCount}/${famIds.length} משפחות ארזו`,
+        ` ${doneCount}/${famIds.length}`,
         item.notes ? ` · ${item.notes}` : '',
       );
     }
@@ -185,6 +191,14 @@ export function renderGear(view, ctx) {
       class: 'iconbtn-soft', 'aria-label': 'עריכה',
       onclick: () => openItemModal(itemId, item),
     }, '⋯');
+  }
+
+  /* תיוג בהקשה אחת — הקטגוריה נשמרת מיד */
+  function catChipFor(itemId, item) {
+    return rowCategoryChip({
+      item, categories, suggestions: GEAR_CATEGORIES,
+      onPick: (picked) => updateGearItem(tripId, itemId, { category: picked || null }),
+    });
   }
 
   /* ---------- מודאל עריכה ---------- */

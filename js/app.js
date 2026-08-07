@@ -5,14 +5,15 @@ import { initUpdateChecker } from './update.js';
 import { initBroadcast } from './broadcast.js';
 import { renderHome } from './views/home.js';
 import { renderGate, renderFamilySwitcher } from './views/trip.js';
-import { renderGear } from './views/gear.js';
+import { renderPersonalGear, renderSharedGear } from './views/gear.js';
 import { renderShopping } from './views/shopping.js';
 import { renderItinerary } from './views/itinerary.js';
 import { renderMeals } from './views/meals.js';
 import { renderExpenses } from './views/expenses.js';
 
 const TABS = [
-  ['gear', 'ציוד', '🎒', renderGear],
+  ['gear', 'ציוד אישי', '🎒', renderPersonalGear],
+  ['shared', 'ציוד לכולם', '🤝', renderSharedGear],
   ['shopping', 'קניות', '🛒', renderShopping],
   ['itinerary', 'מסלול', '🗺️', renderItinerary],
   ['meals', 'ארוחות', '🍽️', renderMeals],

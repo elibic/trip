@@ -81,6 +81,21 @@ export function openCategoryPicker({ current, categories, suggestions = [], onPi
   }
 }
 
+/* צ'יפ קטגוריה על שורת פריט — לחיצה משנה את הקטגוריה מיד, בלי מודאל עריכה */
+export function rowCategoryChip({ item, categories, suggestions, onPick }) {
+  const tagged = !!(item.category || '').trim();
+  return el('button', {
+    class: `row-cat-chip${tagged ? '' : ' untagged'}`,
+    'aria-label': 'שינוי קטגוריה',
+    onclick: (e) => {
+      e.stopPropagation();
+      openCategoryPicker({
+        current: item.category || null, categories, suggestions, onPick,
+      });
+    },
+  }, tagged ? item.category : '＋ קטגוריה');
+}
+
 /* צ'יפ בחירת קטגוריה לשורת ההוספה */
 export function categoryChip({ state, categories, suggestions, className = 'cat-chip' }) {
   const chip = el('button', {

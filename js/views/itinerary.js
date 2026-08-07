@@ -32,8 +32,8 @@ export function renderItinerary(view, ctx) {
         'מקומות שאתם שוקלים — בלי לשייך ליום. אפשר לשבץ ליום בכל שלב.'),
     );
 
-    for (const [stopId, stop] of stops) card.append(ideaRow(stopId, stop));
     card.append(addRow(IDEAS_DAY, 'הוספת רעיון…'));
+    for (const [stopId, stop] of stops) card.append(ideaRow(stopId, stop));
 
     return card;
   }
@@ -117,11 +117,10 @@ export function renderItinerary(view, ctx) {
       ),
     );
 
+    card.append(addRow(dayKey, 'הוספת עצירה…'));
     stops.forEach(([stopId, stop], i) => {
       card.append(stopRow(dayKey, stopId, stop, i, stops));
     });
-
-    card.append(addRow(dayKey, 'הוספת עצירה…'));
 
     return card;
   }

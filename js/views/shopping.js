@@ -1,10 +1,10 @@
-import { el, openModal, confirmDialog, toast, famChip, quickAddRow } from '../ui.js';
+import { el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab } from '../ui.js';
 import {
   addShoppingItem, updateShoppingItem, deleteShoppingItem,
   setBought, claimShopping, clearBoughtItems,
 } from '../store.js';
 import {
-  SHOPPING_CATEGORIES, knownCategories, groupByCategory, categoryChip,
+  SHOPPING_CATEGORIES, knownCategories, groupByCategory, categoryChip, rowCategoryChip,
 } from '../categories.js';
 
 // הקטגוריה שנבחרה לשורת ההוספה — נשמרת בין רינדורים
@@ -34,7 +34,18 @@ export function renderShopping(view, ctx) {
   }
 
   /* ----- הרשימה ----- */
+  const addKey = `shopping-${tripId}`;
   const card = el('div', { class: 'card' });
+
+  const addRow = quickAddRow(addKey, {
+    placeholder: 'פיתות, גחלים, מים…',
+    onAdd: (name) => addShoppingItem(tripId, { name, category: addState.category || null }),
+  });
+  addRow.append(categoryChip({
+    state: addState, categories, suggestions: SHOPPING_CATEGORIES,
+  }));
+  card.append(addRow);   // ההוספה בראש — לא צריך לגלול
+
   // בתוך כל קטגוריה: מה שעוד לא נקנה קודם
   const groups = groupByCategory(items, (a, b) =>
     (a[1].bought ? 1 : 0) - (b[1].bought ? 1 : 0) || (a[1].createdAt || 0) - (b[1].createdAt || 0));
@@ -48,21 +59,14 @@ export function renderShopping(view, ctx) {
     }
     for (const [itemId, item] of list) card.append(itemRow(itemId, item));
   }
-
-  const addRow = quickAddRow(`shopping-${tripId}`, {
-    placeholder: 'פיתות, גחלים, מים…',
-    onAdd: (name) => addShoppingItem(tripId, { name, category: addState.category || null }),
-  });
-  addRow.append(categoryChip({
-    state: addState, categories, suggestions: SHOPPING_CATEGORIES,
-  }));
-  card.append(addRow);
   view.append(card);
 
   if (items.length === 0) {
     view.append(el('p', { class: 'list-hint' },
       '💡 כותבים מוצר ולוחצים Enter — אפשר להמשיך לכתוב עוד, וגם להדביק רשימה שלמה. ',
       'כל משפחה יכולה לקחת על עצמה מוצרים בכפתור "אנחנו נקנה".'));
+  } else {
+    view.append(addFab(addKey, 'מוצר'));
   }
 
   /* ---------- שורה ---------- */
@@ -81,6 +85,10 @@ export function renderShopping(view, ctx) {
         }, 'אנחנו נקנה');
 
     const parts = [item.qty, item.notes].filter(Boolean);
+    const catChip = rowCategoryChip({
+      item, categories, suggestions: SHOPPING_CATEGORIES,
+      onPick: (picked) => updateShoppingItem(tripId, itemId, { category: picked || null }),
+    });
 
     return el('div', { class: `list-item${item.bought ? ' done' : ''}` },
       el('button', {
@@ -90,7 +98,7 @@ export function renderShopping(view, ctx) {
       el('div', { class: 'grow' },
         el('div', { class: 'name', style: item.bought ? 'text-decoration:line-through;opacity:.55' : '' },
           item.name),
-        parts.length ? el('div', { class: 'sub' }, parts.join(' · ')) : null,
+        el('div', { class: 'sub' }, catChip, parts.length ? ` ${parts.join(' · ')}` : ''),
       ),
       item.bought ? null : action,
       el('button', {

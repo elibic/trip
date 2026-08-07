@@ -85,6 +85,21 @@ export function quickAddRow(key, { placeholder, onAdd, multiline = true }) {
   return el('div', { class: 'add-row' }, el('span', { class: 'plus' }, '＋'), input);
 }
 
+/* קפיצה לשורת ההוספה ופתיחת המקלדת — משמש את הכפתור הצף */
+export function focusQuickAdd(key) {
+  const input = quickAdd.get(key)?.node;
+  if (!input?.isConnected) return;
+  input.closest('.add-row')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  input.focus();
+}
+
+/* כפתור ＋ צף שמקפיץ לשורת ההוספה */
+export function addFab(key, label) {
+  return el('button', {
+    class: 'fab', onclick: () => focusQuickAdd(key),
+  }, '＋ ', label);
+}
+
 /* ---------- מודאל (bottom sheet) ---------- */
 
 export function openModal(title, body, { onClose, className = '' } = {}) {
