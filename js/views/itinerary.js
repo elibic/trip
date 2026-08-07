@@ -1,4 +1,4 @@
-import { el, openModal, confirmDialog, toast } from '../ui.js';
+import { el, openModal, confirmDialog, toast, quickAddRow } from '../ui.js';
 import { addStop, updateStop, deleteStop, swapStops, tripDays, fmtDay } from '../store.js';
 
 export function renderItinerary(view, ctx) {
@@ -18,23 +18,20 @@ export function renderItinerary(view, ctx) {
       .sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
 
     const card = el('div', { class: 'card day-card' },
-      el('div', { class: 'day-head' },
-        el('span', { class: 'd' }, `📅 ${fmtDay(dayKey)}`),
-        el('button', {
-          class: 'btn ghost small',
-          onclick: () => openStopModal(dayKey, stops),
-        }, '＋ עצירה'),
-      ),
+      el('div', { class: 'day-head' }, el('span', { class: 'd' }, `📅 ${fmtDay(dayKey)}`)),
     );
-
-    if (stops.length === 0) {
-      card.append(el('div', { class: 'sub', style: 'color:var(--text-soft);font-size:13px;padding:8px 2px' },
-        'עוד אין עצירות ליום הזה'));
-    }
 
     stops.forEach(([stopId, stop], i) => {
       card.append(stopRow(dayKey, stopId, stop, i, stops));
     });
+
+    card.append(quickAddRow(`stop-${tripId}-${dayKey}`, {
+      placeholder: 'הוספת עצירה…',
+      onAdd: (title) => {
+        const maxOrder = stops.length ? Math.max(...stops.map(([, s]) => s.order || 0)) : 0;
+        return addStop(tripId, dayKey, { title, order: maxOrder + 10 });
+      },
+    }));
 
     return card;
   }
@@ -61,7 +58,7 @@ export function renderItinerary(view, ctx) {
         }, '▲'),
         el('button', {
           class: 'edit', 'aria-label': 'עריכה',
-          onclick: () => openStopModal(dayKey, stops, stopId, stop),
+          onclick: () => openStopModal(dayKey, stopId, stop),
         }, '✎'),
         el('button', {
           disabled: i === stops.length - 1, 'aria-label': 'הזזה למטה',
@@ -71,40 +68,33 @@ export function renderItinerary(view, ctx) {
     );
   }
 
-  function openStopModal(dayKey, stops, stopId, stop) {
-    const isEdit = !!stopId;
-    const titleIn = el('input', { type: 'text', placeholder: 'למשל: חוף גופרה, מסעדת השף...', maxlength: 80, value: stop?.title || '' });
-    const timeIn = el('input', { type: 'time', class: 'ltr', value: stop?.time || '' });
-    const placeIn = el('input', { type: 'text', placeholder: 'אם שונה מהשם — לניווט מדויק', maxlength: 100, value: stop?.place || '' });
-    const notesIn = el('textarea', { placeholder: 'למשל: להביא מצופים, יש צל', maxlength: 300 }, stop?.notes || '');
+  function openStopModal(dayKey, stopId, stop) {
+    const titleIn = el('input', { type: 'text', maxlength: 80, value: stop.title || '' });
+    const timeIn = el('input', { type: 'time', class: 'ltr', value: stop.time || '' });
+    const placeIn = el('input', { type: 'text', placeholder: 'אם שונה מהשם — לניווט מדויק', maxlength: 100, value: stop.place || '' });
+    const notesIn = el('textarea', { placeholder: 'למשל: להביא מצופים, יש צל', maxlength: 300 }, stop.notes || '');
 
-    const { close } = openModal(isEdit ? 'עריכת עצירה' : `עצירה חדשה · ${fmtDay(dayKey)}`, el('div', {},
+    const { close } = openModal(`עריכת עצירה · ${fmtDay(dayKey)}`, el('div', {},
       el('div', { class: 'field' }, el('label', {}, 'לאן הולכים?'), titleIn),
       el('div', { class: 'field' }, el('label', {}, 'שעה (לא חובה)'), timeIn),
       el('div', { class: 'field' }, el('label', {}, 'מקום לניווט (לא חובה)'), placeIn),
       el('div', { class: 'field' }, el('label', {}, 'הערות'), notesIn),
       el('div', { class: 'actions' },
-        isEdit ? el('button', { class: 'btn danger-text', onclick: del }, 'מחיקה') : null,
+        el('button', { class: 'btn danger-text', onclick: del }, 'מחיקה'),
         el('button', { class: 'btn secondary', onclick: () => close() }, 'ביטול'),
-        el('button', { class: 'btn', onclick: save }, isEdit ? 'שמירה' : 'הוספה'),
+        el('button', { class: 'btn', onclick: save }, 'שמירה'),
       ),
     ));
 
     async function save() {
       const title = titleIn.value.trim();
       if (!title) { toast('לאן הולכים? צריך שם לעצירה 🙂'); return; }
-      const fields = {
+      await updateStop(tripId, dayKey, stopId, {
         title,
         time: timeIn.value || null,
         place: placeIn.value.trim() || null,
         notes: notesIn.value.trim() || null,
-      };
-      if (isEdit) {
-        await updateStop(tripId, dayKey, stopId, fields);
-      } else {
-        const maxOrder = stops.length ? Math.max(...stops.map(([, s]) => s.order || 0)) : 0;
-        await addStop(tripId, dayKey, { ...fields, order: maxOrder + 10 });
-      }
+      });
       close();
     }
 

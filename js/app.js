@@ -1,5 +1,5 @@
 import * as store from './store.js';
-import { el, clear } from './ui.js';
+import { el, clear, setRendering } from './ui.js';
 import { initInstallBanner } from './install.js';
 import { renderHome } from './views/home.js';
 import { renderGate, renderFamilySwitcher } from './views/trip.js';
@@ -78,13 +78,18 @@ function onRouteChange() {
 /* ---------- רינדור ---------- */
 
 function render() {
-  clear(topbar);
-  clear(view);
-  view.classList.remove('no-tabs');
-  tabbar.hidden = true;
+  setRendering(true);
+  try {
+    clear(topbar);
+    clear(view);
+    view.classList.remove('no-tabs');
+    tabbar.hidden = true;
 
-  if (state.route.name === 'home') return renderHomeScreen();
-  return renderTripScreen();
+    if (state.route.name === 'home') renderHomeScreen();
+    else renderTripScreen();
+  } finally {
+    setRendering(false);
+  }
 }
 
 function renderHomeScreen() {

@@ -118,6 +118,29 @@ a { color: var(--primary); text-decoration: none; }
 .list-item .name { font-weight: 500; font-size: 15.5px; }
 .list-item .sub { font-size: 12.5px; color: var(--text-soft); margin-top: 1px; }
 
+/* ===== שורת הוספה מהירה ===== */
+.add-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 2px; min-height: 52px;
+}
+.list-item + .add-row { border-top: 1px dashed var(--line); }
+.stop + .add-row { border-top: 1px dashed var(--line); }
+.add-row .plus {
+  width: 28px; text-align: center; flex-shrink: 0;
+  font-size: 19px; color: var(--primary); font-weight: 700;
+}
+.add-row input {
+  flex: 1; min-width: 0; border: none; background: transparent;
+  outline: none; padding: 4px 0; font-size: 15.5px; color: var(--text);
+}
+.add-row input::placeholder { color: #9aa5a2; }
+.add-row:focus-within .plus { transform: scale(1.15); transition: transform .12s; }
+
+.list-hint {
+  font-size: 13px; color: var(--text-soft); line-height: 1.6;
+  padding: 4px 6px; margin-top: 10px;
+}
+
 /* ===== צ'קבוקס גדול ===== */
 .bigcheck {
   width: 28px; height: 28px; border-radius: 9px;

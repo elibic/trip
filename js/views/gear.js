@@ -1,4 +1,4 @@
-import { el, openModal, confirmDialog, toast, emptyState, famChip } from '../ui.js';
+import { el, openModal, confirmDialog, toast, famChip, quickAddRow } from '../ui.js';
 import {
   addGearItem, updateGearItem, deleteGearItem,
   setGearChecked, claimShared, setPacked,
@@ -13,29 +13,34 @@ export function renderGear(view, ctx) {
   const shared = gear.filter(([, g]) => g.type === 'shared');
   const perFamily = gear.filter(([, g]) => g.type !== 'shared');
 
-  if (gear.length === 0) {
-    view.append(emptyState('🎒', 'עוד אין פריטי ציוד. מה צריך להביא לטיול?'));
-  }
-
   /* ----- ציוד משותף ----- */
-  if (shared.length) {
-    view.append(el('div', { class: 'section-title' }, '🤝 ציוד משותף',
-      el('span', { class: 'hint' }, 'משפחה אחת מביאה עבור כולם')));
-    const card = el('div', { class: 'card' });
-    for (const [itemId, item] of shared) card.append(sharedRow(itemId, item));
-    view.append(card);
-  }
+  view.append(el('div', { class: 'section-title' }, '🤝 ציוד משותף',
+    el('span', { class: 'hint' }, 'משפחה אחת מביאה עבור כולם')));
+
+  const sharedCard = el('div', { class: 'card' });
+  for (const [itemId, item] of shared) sharedCard.append(sharedRow(itemId, item));
+  sharedCard.append(quickAddRow(`gear-shared-${tripId}`, {
+    placeholder: 'מנגל, צידנית גדולה…',
+    onAdd: (name) => addGearItem(tripId, { name, type: 'shared' }),
+  }));
+  view.append(sharedCard);
 
   /* ----- ציוד אישי ----- */
-  if (perFamily.length) {
-    view.append(el('div', { class: 'section-title' }, '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה',
-      el('span', { class: 'hint' }, 'סמנו כשארזתם')));
-    const card = el('div', { class: 'card' });
-    for (const [itemId, item] of perFamily) card.append(perFamilyRow(itemId, item));
-    view.append(card);
-  }
+  view.append(el('div', { class: 'section-title' }, '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה',
+    el('span', { class: 'hint' }, 'סמנו כשארזתם')));
 
-  view.append(el('button', { class: 'fab', onclick: () => openItemModal() }, '＋ פריט'));
+  const perFamilyCard = el('div', { class: 'card' });
+  for (const [itemId, item] of perFamily) perFamilyCard.append(perFamilyRow(itemId, item));
+  perFamilyCard.append(quickAddRow(`gear-per-${tripId}`, {
+    placeholder: 'אוהל, שק"שים…',
+    onAdd: (name) => addGearItem(tripId, { name, type: 'perFamily' }),
+  }));
+  view.append(perFamilyCard);
+
+  if (gear.length === 0) {
+    view.append(el('p', { class: 'list-hint' },
+      '💡 כותבים פריט ולוחצים Enter — אפשר להמשיך לכתוב עוד. גם הדבקה של רשימה שלמה עובדת.'));
+  }
 
   /* ---------- שורות ---------- */
 
@@ -50,7 +55,10 @@ export function renderGear(view, ctx) {
         onclick: () => claimShared(tripId, itemId, myFamilyId),
       }, 'אנחנו נביא!');
     } else if (isMine) {
-      action = packedCheck(itemId, item);
+      action = el('button', {
+        class: `bigcheck${item.packed ? ' on' : ''}`, 'aria-label': 'נארז',
+        onclick: () => setPacked(tripId, itemId, !item.packed),
+      }, '✓');
     } else {
       action = famChip(respFam);
     }
@@ -59,7 +67,7 @@ export function renderGear(view, ctx) {
       el('div', { class: 'grow' },
         el('div', { class: 'name', style: item.packed ? 'text-decoration:line-through;opacity:.6' : '' },
           item.name),
-        subLine(item, respFam && !isMine && item.packed ? '✓ נארז' : (isMine ? 'אתם מביאים 💪' : null)),
+        subLine(item, isMine ? 'אתם מביאים 💪' : (respFam && item.packed ? '✓ נארז' : null)),
       ),
       action,
       menuBtn(itemId, item),
@@ -91,6 +99,7 @@ export function renderGear(view, ctx) {
         el('div', { class: 'sub' },
           dots, ` ${doneCount}/${famIds.length} משפחות ארזו`,
           item.category ? ` · ${item.category}` : '',
+          item.notes ? ` · ${item.notes}` : '',
         ),
       ),
       menuBtn(itemId, item),
@@ -102,14 +111,6 @@ export function renderGear(view, ctx) {
     return parts.length ? el('div', { class: 'sub' }, parts.join(' · ')) : null;
   }
 
-  function packedCheck(itemId, item) {
-    const on = !!item.packed;
-    return el('button', {
-      class: `bigcheck${on ? ' on' : ''}`, 'aria-label': 'נארז',
-      onclick: () => setPacked(tripId, itemId, !on),
-    }, '✓');
-  }
-
   function menuBtn(itemId, item) {
     return el('button', {
       class: 'iconbtn-soft', 'aria-label': 'עריכה',
@@ -117,76 +118,71 @@ export function renderGear(view, ctx) {
     }, '⋯');
   }
 
-  /* ---------- מודאל הוספה/עריכה ---------- */
+  /* ---------- מודאל עריכה (רק בלחיצה על ⋯) ---------- */
 
   function openItemModal(itemId, item) {
-    const isEdit = !!itemId;
-    const nameIn = el('input', { type: 'text', placeholder: 'למשל: אוהל, מנגל, שקיות קרח...', maxlength: 60, value: item?.name || '' });
-    const catIn = el('input', { type: 'text', placeholder: 'למשל: לינה, מטבח (לא חובה)', maxlength: 30, value: item?.category || '' });
-    const notesIn = el('input', { type: 'text', placeholder: 'לא חובה', maxlength: 120, value: item?.notes || '' });
+    const nameIn = el('input', { type: 'text', maxlength: 60, value: item.name || '' });
+    const catIn = el('input', { type: 'text', placeholder: 'למשל: לינה, מטבח', maxlength: 30, value: item.category || '' });
+    const notesIn = el('input', { type: 'text', placeholder: 'לא חובה', maxlength: 120, value: item.notes || '' });
 
-    let type = item?.type || 'perFamily';
+    let type = item.type || 'perFamily';
     const radios = el('div', { class: 'radio-cards' },
-      radioCard('perFamily', '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה', 'לכל משפחה יש סימון משלה — למשל אוהל, שק"שים'),
-      radioCard('shared', '🤝 פריט משותף — משפחה אחת אחראית', 'מישהו לוקח אחריות עבור כולם — למשל מנגל, צידנית גדולה'),
+      radioCard('perFamily', '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה'),
+      radioCard('shared', '🤝 פריט משותף — משפחה אחת אחראית'),
     );
 
-    function radioCard(value, title, desc) {
+    function radioCard(value, title) {
       const input = el('input', { type: 'radio', name: 'gtype', checked: type === value });
       const card = el('label', { class: `radio-card${type === value ? ' selected' : ''}` },
-        input,
-        el('div', {}, el('div', { class: 't' }, title), el('div', { class: 'd' }, desc)),
+        input, el('div', {}, el('div', { class: 't' }, title)),
       );
       input.addEventListener('change', () => {
         type = value;
         radios.querySelectorAll('.radio-card').forEach((c) => c.classList.remove('selected'));
         card.classList.add('selected');
+        respField.hidden = value !== 'shared';
       });
       return card;
     }
 
-    // בעריכת פריט משותף — אפשרות לשנות אחראי
-    let respSelect = null;
-    if (isEdit && item.type === 'shared') {
-      respSelect = el('select', {},
-        el('option', { value: '' }, '— עדיין אין אחראי —'),
-        Object.entries(families).map(([id, f]) =>
-          el('option', { value: id, selected: id === item.responsibleFamilyId }, f.name)),
-      );
-    }
+    const respSelect = el('select', {},
+      el('option', { value: '' }, '— עדיין אין אחראי —'),
+      Object.entries(families).map(([id, f]) =>
+        el('option', { value: id, selected: id === item.responsibleFamilyId }, f.name)),
+    );
+    const respField = el('div', { class: 'field', hidden: type !== 'shared' },
+      el('label', {}, 'מי אחראי?'), respSelect);
 
-    const { close } = openModal(isEdit ? 'עריכת פריט' : 'פריט חדש', el('div', {},
-      el('div', { class: 'field' }, el('label', {}, 'מה מביאים?'), nameIn),
+    const { close } = openModal('עריכת פריט', el('div', {},
+      el('div', { class: 'field' }, el('label', {}, 'שם הפריט'), nameIn),
       el('div', { class: 'field' }, el('label', {}, 'סוג הפריט'), radios),
-      respSelect ? el('div', { class: 'field' }, el('label', {}, 'מי אחראי?'), respSelect) : null,
+      respField,
       el('div', { class: 'field' }, el('label', {}, 'קטגוריה'), catIn),
       el('div', { class: 'field' }, el('label', {}, 'הערה'), notesIn),
       el('div', { class: 'actions' },
-        isEdit ? el('button', { class: 'btn danger-text', onclick: del }, 'מחיקה') : null,
+        el('button', { class: 'btn danger-text', onclick: del }, 'מחיקה'),
         el('button', { class: 'btn secondary', onclick: () => close() }, 'ביטול'),
-        el('button', { class: 'btn', onclick: save }, isEdit ? 'שמירה' : 'הוספה'),
+        el('button', { class: 'btn', onclick: save }, 'שמירה'),
       ),
     ));
 
     async function save() {
       const name = nameIn.value.trim();
-      if (!name) { toast('מה מביאים? צריך שם לפריט 🙂'); return; }
+      if (!name) { toast('צריך שם לפריט 🙂'); return; }
       const fields = {
         name, type,
         category: catIn.value.trim() || null,
         notes: notesIn.value.trim() || null,
       };
-      if (isEdit) {
-        if (respSelect) fields.responsibleFamilyId = respSelect.value || null;
-        if (item.type === 'shared' && type !== 'shared') {
-          fields.responsibleFamilyId = null;
-          fields.packed = null;
-        }
-        if (item.type !== 'shared' && type === 'shared') fields.checked = null;
-        await updateGearItem(tripId, itemId, fields);
+      if (type === 'shared') {
+        fields.responsibleFamilyId = respSelect.value || null;
+        if (!respSelect.value) fields.packed = null;
+        if (item.type !== 'shared') fields.checked = null;
       } else {
-        await addGearItem(tripId, fields);
+        fields.responsibleFamilyId = null;
+        fields.packed = null;
       }
+      await updateGearItem(tripId, itemId, fields);
       close();
     }
 

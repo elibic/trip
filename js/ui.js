@@ -23,6 +23,68 @@ export function clear(node) {
   return node;
 }
 
+/* ---------- שורת הוספה מהירה (בסגנון גוגל קיפ) ----------
+   התצוגה מתרנדרת מחדש בכל עדכון מהשרת, לכן שומרים כאן את הטקסט
+   שהוקלד ואת מצב הפוקוס כדי שהכתיבה לא תיקטע. */
+
+const quickAdd = new Map(); // key → { node, draft, focused }
+
+/* בזמן רינדור מחדש הדפדפן משגר blur על השדה שנמחק (עוד לפני שהוא מנותק),
+   ואסור להתייחס אליו כאילו המשתמש עזב את השדה. app.js מסמן את החלון הזה. */
+let rendering = false;
+export function setRendering(value) { rendering = value; }
+
+export function quickAddRow(key, { placeholder, onAdd, multiline = true }) {
+  const state = quickAdd.get(key) || { draft: '', focused: false };
+  quickAdd.set(key, state);
+
+  const input = el('input', {
+    type: 'text', placeholder, value: state.draft,
+    maxlength: 80, enterkeyhint: 'enter',
+    autocomplete: 'off', autocorrect: 'off',
+  });
+  state.node = input;
+
+  input.addEventListener('input', () => { state.draft = input.value; });
+  input.addEventListener('focus', () => { state.focused = true; });
+
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { input.value = ''; state.draft = ''; input.blur(); }
+  });
+
+  // blur שנגרם מרינדור מחדש אינו blur אמיתי — מתעלמים ממנו
+  input.addEventListener('blur', () => {
+    if (rendering || !input.isConnected) return;
+    state.focused = false;
+    commit();
+  });
+
+  if (multiline) {
+    input.addEventListener('paste', (e) => {
+      const text = e.clipboardData?.getData('text') || '';
+      if (!text.includes('\n')) return;
+      e.preventDefault();
+      const lines = text.split('\n').map((s) => s.trim()).filter(Boolean);
+      if (!lines.length) return;
+      lines.forEach(onAdd);
+      toast(`נוספו ${lines.length} פריטים`);
+    });
+  }
+
+  function commit() {
+    if (!input.isConnected || quickAdd.get(key)?.node !== input) return;
+    const text = input.value.trim();
+    input.value = '';
+    state.draft = '';
+    if (text) onAdd(text);
+  }
+
+  if (state.focused) queueMicrotask(() => input.isConnected && input.focus());
+
+  return el('div', { class: 'add-row' }, el('span', { class: 'plus' }, '＋'), input);
+}
+
 /* ---------- מודאל (bottom sheet) ---------- */
 
 export function openModal(title, body, { onClose } = {}) {
