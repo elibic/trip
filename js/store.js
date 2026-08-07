@@ -168,6 +168,7 @@ export function moveShoppingToGear(tripId, entries) {
       category: (item.category || '').trim() || SHOPPING_TO_GEAR_CATEGORY,
       responsibleFamilyId: item.buyerFamilyId || null,
       notes,
+      fromShopping: true,   // הגיע מרשימת הקניות — כבר נקנה
       createdAt: now + i,   // שמירה על סדר ההעברה
     };
   });

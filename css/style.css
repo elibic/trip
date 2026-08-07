@@ -182,6 +182,12 @@ a { color: var(--primary); text-decoration: none; }
 }
 .cat-head + .list-item { border-top: none; }
 
+.bought-badge {
+  background: #dcfce7; color: #166534;
+  border-radius: 6px; padding: 1px 7px; font-size: 11.5px; font-weight: 700;
+  margin-inline-end: 6px; white-space: nowrap;
+}
+
 .private-badge {
   background: var(--warn-bg); color: var(--warn-text);
   border-radius: 6px; padding: 1px 7px; font-size: 11.5px; font-weight: 700;
@@ -624,6 +630,16 @@ a { color: var(--primary); text-decoration: none; }
   height: 100%; background: var(--primary); border-radius: 99px; transition: width .25s;
 }
 .list-item.done .sub { opacity: .55; }
+.moved-line {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  margin-top: 11px; padding: 9px 11px; border-radius: 10px;
+  background: var(--primary-light); color: var(--primary-dark);
+  font-size: 13px; font-weight: 700; text-align: start;
+}
+.moved-line .arrow { margin-inline-start: auto; font-size: 16px; opacity: .7; }
+.moved-line:active { filter: brightness(.95); }
+.moved-line.standalone { margin-top: 0; padding: 14px; }
+
 .shop-summary .bought-actions { display: flex; gap: 8px; margin-top: 12px; }
 .shop-summary .bought-actions .btn { flex: 1; }
 .btn.to-gear {

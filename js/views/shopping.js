@@ -21,6 +21,7 @@ export function renderShopping(view, ctx) {
     .sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
   const categories = knownCategories(items);
   const boughtIds = items.filter(([, i]) => i.bought).map(([id]) => id);
+  const movedCount = Object.values(trip.gear || {}).filter((g) => g.fromShopping).length;
 
   /* ----- סיכום ----- */
   if (items.length) {
@@ -30,6 +31,12 @@ export function renderShopping(view, ctx) {
         el('span', { class: 'nums' }, `🛒 ${items.length - boughtIds.length} נשארו · ${boughtIds.length} נקנו`),
       ),
       el('div', { class: 'bar' }, el('div', { class: 'fill', style: `width:${pct}%` })),
+      movedCount
+        ? el('button', {
+            class: 'moved-line',
+            onclick: () => ctx.navigate(`/trip/${tripId}/shared`),
+          }, `📦 ${movedCount} הועברו לציוד`, el('span', { class: 'arrow' }, '‹'))
+        : null,
       boughtIds.length
         ? el('div', { class: 'bought-actions' },
             el('button', { class: 'btn small', onclick: moveAllBought },
@@ -79,6 +86,13 @@ export function renderShopping(view, ctx) {
     for (const [itemId, item] of list) card.append(itemRow(itemId, item));
   }
   view.append(card);
+
+  if (items.length === 0 && movedCount) {
+    view.append(el('button', {
+      class: 'card moved-line standalone',
+      onclick: () => ctx.navigate(`/trip/${tripId}/shared`),
+    }, `📦 ${movedCount} הועברו לציוד`, el('span', { class: 'arrow' }, '‹')));
+  }
 
   if (items.length === 0) {
     view.append(el('p', { class: 'list-hint' },
