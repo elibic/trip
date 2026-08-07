@@ -615,6 +615,12 @@ a { color: var(--primary); text-decoration: none; }
   height: 100%; background: var(--primary); border-radius: 99px; transition: width .25s;
 }
 .list-item.done .sub { opacity: .55; }
+.shop-summary .bought-actions { display: flex; gap: 8px; margin-top: 12px; }
+.shop-summary .bought-actions .btn { flex: 1; }
+.btn.to-gear {
+  background: var(--primary-light); color: var(--primary-dark);
+  flex-shrink: 0; font-weight: 700;
+}
 .chip.mine { background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
 
 /* ===== הוצאות ===== */

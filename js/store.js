@@ -150,6 +150,31 @@ export function clearBoughtItems(tripId, itemIds) {
     Object.fromEntries(itemIds.map((id) => [id, null])));
 }
 
+// קטגוריית ברירת מחדל למוצר שעובר לציוד בלי קטגוריה משלו
+export const SHOPPING_TO_GEAR_CATEGORY = 'אוכל';
+
+/* העברת מוצרים שנקנו לרשימת "ציוד לכולם" — מה שקנינו צריך גם לזכור לקחת.
+   entries: [[itemId, shoppingItem], ...]. הכתיבה אחת ואטומית. */
+export function moveShoppingToGear(tripId, entries) {
+  const updates = {};
+  const now = Date.now();
+
+  entries.forEach(([itemId, item], i) => {
+    const notes = [item.qty, item.notes].filter(Boolean).join(' · ') || null;
+    updates[`trips/${tripId}/shopping/${itemId}`] = null;
+    updates[`trips/${tripId}/gear/${newKey(`trips/${tripId}/gear`)}`] = {
+      name: item.name,
+      type: 'shared',
+      category: (item.category || '').trim() || SHOPPING_TO_GEAR_CATEGORY,
+      responsibleFamilyId: item.buyerFamilyId || null,
+      notes,
+      createdAt: now + i,   // שמירה על סדר ההעברה
+    };
+  });
+
+  return updateAt('/', updates);
+}
+
 /* ---------- מסלול ---------- */
 
 export function addStop(tripId, dayKey, stop) {

@@ -3,7 +3,7 @@ import {
 } from '../ui.js';
 import {
   addShoppingItem, updateShoppingItem, deleteShoppingItem,
-  setBought, claimShopping, clearBoughtItems,
+  setBought, claimShopping, clearBoughtItems, moveShoppingToGear,
 } from '../store.js';
 import {
   SHOPPING_CATEGORIES, knownCategories, groupByCategory, categoryChip,
@@ -28,11 +28,15 @@ export function renderShopping(view, ctx) {
     view.append(el('div', { class: 'card shop-summary' },
       el('div', { class: 'line' },
         el('span', { class: 'nums' }, `🛒 ${items.length - boughtIds.length} נשארו · ${boughtIds.length} נקנו`),
-        boughtIds.length
-          ? el('button', { class: 'btn ghost small', onclick: clearBought }, '🧹 ניקוי הנקנו')
-          : null,
       ),
       el('div', { class: 'bar' }, el('div', { class: 'fill', style: `width:${pct}%` })),
+      boughtIds.length
+        ? el('div', { class: 'bought-actions' },
+            el('button', { class: 'btn small', onclick: moveAllBought },
+              `📦 העברת ${boughtIds.length} שנקנו לציוד`),
+            el('button', { class: 'btn secondary small', onclick: clearBought }, '🧹 ניקוי'),
+          )
+        : null,
     ));
   }
 
@@ -112,12 +116,32 @@ export function renderShopping(view, ctx) {
           item.name),
         el('div', { class: 'sub' }, catChip, parts.length ? ` ${parts.join(' · ')}` : ''),
       ),
-      item.bought ? null : action,
+      item.bought
+        ? el('button', {
+            class: 'btn small to-gear', title: 'העברה לרשימת הציוד',
+            onclick: () => moveOne(itemId, item),
+          }, '📦 לציוד')
+        : action,
       el('button', {
         class: 'iconbtn-soft', 'aria-label': 'עריכה',
         onclick: () => openItemModal(itemId, item),
       }, '⋯'),
     );
+  }
+
+  async function moveOne(itemId, item) {
+    await moveShoppingToGear(tripId, [[itemId, item]]);
+    toast(`"${item.name}" עבר לציוד לכולם 📦`);
+  }
+
+  async function moveAllBought() {
+    const entries = items.filter(([id]) => boughtIds.includes(id));
+    const ok = await confirmDialog(
+      `להעביר ${entries.length} מוצרים שנקנו לרשימת "ציוד לכולם"? כך לא תשכחו לקחת אותם.`,
+      { danger: 'העברה' });
+    if (!ok) return;
+    await moveShoppingToGear(tripId, entries);
+    toast(`${entries.length} מוצרים עברו לציוד לכולם 📦`);
   }
 
   async function clearBought() {
