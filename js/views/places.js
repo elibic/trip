@@ -1,5 +1,5 @@
 import { el, clear, openModal, toast } from '../ui.js';
-import { addStop, updateStop, currentTrip, tripDays, fmtDay } from '../store.js';
+import { addStop, updateStop, currentTrip, tripDays, dayLabel, IDEAS_DAY } from '../store.js';
 import {
   CATEGORIES, searchPlaces, nearbyPlaces, fmtDistance,
   googleEmbedUrl, googleMapsUrl,
@@ -8,8 +8,8 @@ import {
 /* מסך חיפוש מקומות עם מפת גוגל מוטמעת.
    pickFor (אופציונלי): { dayKey, stopId } — עדכון מיקום לעצירה קיימת במקום הוספה חדשה. */
 export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
-  const days = tripDays(trip.meta);
-  let targetDay = dayKey || days[0];
+  const days = [IDEAS_DAY, ...tripDays(trip.meta)];
+  let targetDay = dayKey || days[1] || IDEAS_DAY;
   let anchor = firstKnownPoint(trip, dayKey);  // נקודת ייחוס לחיפוש "באזור"
   let selected = null;
   let activeCat = null;
@@ -17,7 +17,8 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
   /* ---------- אלמנטים ---------- */
 
   const daySelect = el('select', { class: 'day-select', onchange: (e) => { targetDay = e.target.value; } },
-    days.map((d) => el('option', { value: d, selected: d === targetDay }, fmtDay(d))));
+    days.map((d) => el('option', { value: d, selected: d === targetDay },
+      d === IDEAS_DAY ? '💡 רעיונות (בלי יום)' : dayLabel(d))));
 
   const searchInput = el('input', {
     type: 'search', placeholder: 'חפשו מקום או אזור — למשל: חוף גופרה, טבריה',
@@ -112,7 +113,7 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
       title: place.name, place: place.name,
       lat: place.lat, lng: place.lng, order: maxOrder + 10,
     });
-    toast(`"${place.name}" נוסף ל${fmtDay(targetDay)} ✅`);
+    toast(`"${place.name}" נוסף ל${dayLabel(targetDay)} ✅`);
   }
 
   /* ---------- תצוגה ---------- */

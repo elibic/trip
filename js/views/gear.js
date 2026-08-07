@@ -4,42 +4,115 @@ import {
   setGearChecked, claimShared, setPacked,
 } from '../store.js';
 
+const DEFAULT_CATEGORY = 'כללי';
+const SUGGESTED_CATEGORIES = [
+  'לינה', 'מטבח ואוכל', 'בגדים', 'ילדים',
+  'חוף ובריכה', 'עזרה ראשונה', 'אלקטרוניקה', 'ניקיון',
+];
+
+// הקטגוריה והמצב הפרטי שנבחרו לשורת ההוספה — נשמרים בין רינדורים
+const addState = {
+  shared: { category: null },
+  perFamily: { category: null, isPrivate: false },
+};
+
 export function renderGear(view, ctx) {
   const { tripId, trip, myFamilyId } = ctx;
   const families = trip.families || {};
-  const gear = Object.entries(trip.gear || {})
+
+  const all = Object.entries(trip.gear || {})
     .sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
 
-  const shared = gear.filter(([, g]) => g.type === 'shared');
-  const perFamily = gear.filter(([, g]) => g.type !== 'shared');
+  // פריטים פרטיים גלויים רק למשפחה שרשמה אותם
+  const visible = all.filter(([, g]) => !g.private || g.ownerFamilyId === myFamilyId);
+  const categories = knownCategories(visible);
 
-  /* ----- ציוד משותף ----- */
-  view.append(el('div', { class: 'section-title' }, '🤝 ציוד משותף',
-    el('span', { class: 'hint' }, 'משפחה אחת מביאה עבור כולם')));
-
-  const sharedCard = el('div', { class: 'card' });
-  for (const [itemId, item] of shared) sharedCard.append(sharedRow(itemId, item));
-  sharedCard.append(quickAddRow(`gear-shared-${tripId}`, {
+  renderSection({
+    type: 'shared',
+    items: visible.filter(([, g]) => g.type === 'shared'),
+    title: '🤝 ציוד משותף',
+    hint: 'משפחה אחת מביאה עבור כולם',
     placeholder: 'מנגל, צידנית גדולה…',
-    onAdd: (name) => addGearItem(tripId, { name, type: 'shared' }),
-  }));
-  view.append(sharedCard);
+    row: sharedRow,
+  });
 
-  /* ----- ציוד אישי ----- */
-  view.append(el('div', { class: 'section-title' }, '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה',
-    el('span', { class: 'hint' }, 'סמנו כשארזתם')));
-
-  const perFamilyCard = el('div', { class: 'card' });
-  for (const [itemId, item] of perFamily) perFamilyCard.append(perFamilyRow(itemId, item));
-  perFamilyCard.append(quickAddRow(`gear-per-${tripId}`, {
+  renderSection({
+    type: 'perFamily',
+    items: visible.filter(([, g]) => g.type !== 'shared'),
+    title: '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה',
+    hint: 'סמנו כשארזתם',
     placeholder: 'אוהל, שק"שים…',
-    onAdd: (name) => addGearItem(tripId, { name, type: 'perFamily' }),
-  }));
-  view.append(perFamilyCard);
+    row: perFamilyRow,
+  });
 
-  if (gear.length === 0) {
+  if (all.length === 0) {
     view.append(el('p', { class: 'list-hint' },
-      '💡 כותבים פריט ולוחצים Enter — אפשר להמשיך לכתוב עוד. גם הדבקה של רשימה שלמה עובדת.'));
+      '💡 כותבים פריט ולוחצים Enter — אפשר להמשיך לכתוב עוד. ',
+      'בכפתור הקטגוריה בוחרים לאיזו קטגוריה הפריטים החדשים ייכנסו.'));
+  }
+
+  /* ---------- מקטע ---------- */
+
+  function renderSection({ type, items, title, hint, placeholder, row }) {
+    view.append(el('div', { class: 'section-title' }, title, el('span', { class: 'hint' }, hint)));
+
+    const card = el('div', { class: 'card' });
+    const groups = groupByCategory(items);
+
+    for (const [category, list] of groups) {
+      if (groups.length > 1) {
+        card.append(el('div', { class: 'cat-head' },
+          el('span', { class: 'nm' }, category),
+          el('span', { class: 'count' }, list.length),
+        ));
+      }
+      for (const [itemId, item] of list) card.append(row(itemId, item));
+    }
+
+    card.append(buildAddRow({ type, placeholder }));
+    view.append(card);
+  }
+
+  function buildAddRow({ type, placeholder }) {
+    const st = addState[type];
+
+    const row = quickAddRow(`gear-${type}-${tripId}`, {
+      placeholder,
+      onAdd: (name) => addGearItem(tripId, {
+        name, type,
+        category: st.category || null,
+        ...(type === 'perFamily' && st.isPrivate
+          ? { private: true, ownerFamilyId: myFamilyId }
+          : {}),
+      }),
+    });
+
+    if (type === 'perFamily') {
+      const lock = el('button', {
+        class: `lock-btn${st.isPrivate ? ' on' : ''}`,
+        title: 'פריט פרטי — רק המשפחה שלכם תראה אותו',
+        'aria-label': 'פריט פרטי',
+        onclick: () => {
+          st.isPrivate = !st.isPrivate;
+          lock.classList.toggle('on', st.isPrivate);
+          toast(st.isPrivate
+            ? '🔒 הפריטים הבאים יהיו פרטיים — רק אתם תראו אותם'
+            : 'הפריטים הבאים יהיו גלויים לכל המשפחות');
+        },
+      }, '🔒');
+      row.append(lock);
+    }
+
+    const chip = el('button', {
+      class: 'cat-chip',
+      onclick: () => openCategoryPicker(st.category, (picked) => {
+        st.category = picked;
+        chip.textContent = picked || DEFAULT_CATEGORY;
+      }),
+    }, st.category || DEFAULT_CATEGORY);
+    row.append(chip);
+
+    return row;
   }
 
   /* ---------- שורות ---------- */
@@ -63,11 +136,14 @@ export function renderGear(view, ctx) {
       action = famChip(respFam);
     }
 
+    const extra = isMine ? 'אתם מביאים 💪' : (respFam && item.packed ? '✓ נארז' : null);
+    const notes = [item.notes, extra].filter(Boolean).join(' · ');
+
     return el('div', { class: 'list-item' },
       el('div', { class: 'grow' },
         el('div', { class: 'name', style: item.packed ? 'text-decoration:line-through;opacity:.6' : '' },
           item.name),
-        subLine(item, isMine ? 'אתם מביאים 💪' : (respFam && item.packed ? '✓ נארז' : null)),
+        notes ? el('div', { class: 'sub' }, notes) : null,
       ),
       action,
       menuBtn(itemId, item),
@@ -77,16 +153,26 @@ export function renderGear(view, ctx) {
   function perFamilyRow(itemId, item) {
     const checked = item.checked || {};
     const myChecked = !!checked[myFamilyId];
-    const famIds = Object.keys(families);
-    const doneCount = famIds.filter((id) => checked[id]).length;
 
-    const dots = el('span', { class: 'dots' },
-      famIds.map((id) => el('span', {
-        class: `dot${checked[id] ? ' on' : ''}`,
-        style: `background:${families[id].color}`,
-        title: families[id].name,
-      })),
-    );
+    let sub;
+    if (item.private) {
+      sub = el('div', { class: 'sub' },
+        el('span', { class: 'private-badge' }, '🔒 פרטי'),
+        item.notes ? ` · ${item.notes}` : '');
+    } else {
+      const famIds = Object.keys(families);
+      const doneCount = famIds.filter((id) => checked[id]).length;
+      sub = el('div', { class: 'sub' },
+        el('span', { class: 'dots' },
+          famIds.map((id) => el('span', {
+            class: `dot${checked[id] ? ' on' : ''}`,
+            style: `background:${families[id].color}`,
+            title: families[id].name,
+          }))),
+        ` ${doneCount}/${famIds.length} משפחות ארזו`,
+        item.notes ? ` · ${item.notes}` : '',
+      );
+    }
 
     return el('div', { class: 'list-item' },
       el('button', {
@@ -96,19 +182,10 @@ export function renderGear(view, ctx) {
       el('div', { class: 'grow' },
         el('div', { class: 'name', style: myChecked ? 'text-decoration:line-through;opacity:.6' : '' },
           item.name),
-        el('div', { class: 'sub' },
-          dots, ` ${doneCount}/${famIds.length} משפחות ארזו`,
-          item.category ? ` · ${item.category}` : '',
-          item.notes ? ` · ${item.notes}` : '',
-        ),
+        sub,
       ),
       menuBtn(itemId, item),
     );
-  }
-
-  function subLine(item, extra) {
-    const parts = [item.category, item.notes, extra].filter(Boolean);
-    return parts.length ? el('div', { class: 'sub' }, parts.join(' · ')) : null;
   }
 
   function menuBtn(itemId, item) {
@@ -118,14 +195,77 @@ export function renderGear(view, ctx) {
     }, '⋯');
   }
 
-  /* ---------- מודאל עריכה (רק בלחיצה על ⋯) ---------- */
+  /* ---------- בחירת קטגוריה ---------- */
+
+  function openCategoryPicker(current, onPick) {
+    const options = [DEFAULT_CATEGORY, ...categories.filter((c) => c !== DEFAULT_CATEGORY)];
+    const suggestions = SUGGESTED_CATEGORIES.filter((s) => !options.includes(s));
+
+    const list = el('div', { class: 'fam-list', style: 'max-width:none' },
+      options.map((cat) => el('button', {
+        class: 'fam-pick', onclick: () => pick(cat === DEFAULT_CATEGORY ? null : cat),
+      },
+        el('span', { style: 'flex:1;text-align:start' }, cat),
+        (current || DEFAULT_CATEGORY) === cat ? el('span', { style: 'color:var(--primary)' }, '✓') : null,
+      )),
+    );
+
+    const newIn = el('input', { type: 'text', placeholder: 'שם הקטגוריה', maxlength: 25 });
+    newIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addNew(); } });
+
+    const { close } = openModal('קטגוריה', el('div', {},
+      list,
+      suggestions.length ? el('div', { class: 'suggest-row' },
+        suggestions.map((s) => el('button', { class: 'map-chip', onclick: () => pick(s) }, `＋ ${s}`))) : null,
+      el('div', { class: 'field', style: 'margin-top:14px' },
+        el('label', {}, 'קטגוריה חדשה'),
+        el('div', { class: 'row2' }, newIn, el('button', { class: 'btn', onclick: addNew }, 'הוספה')),
+      ),
+    ));
+
+    function addNew() {
+      const name = newIn.value.trim();
+      if (!name) { toast('צריך שם לקטגוריה 🙂'); return; }
+      pick(name);
+    }
+
+    function pick(value) {
+      onPick(value);
+      close();
+    }
+  }
+
+  /* ---------- מודאל עריכה ---------- */
 
   function openItemModal(itemId, item) {
     const nameIn = el('input', { type: 'text', maxlength: 60, value: item.name || '' });
-    const catIn = el('input', { type: 'text', placeholder: 'למשל: לינה, מטבח', maxlength: 30, value: item.category || '' });
     const notesIn = el('input', { type: 'text', placeholder: 'לא חובה', maxlength: 120, value: item.notes || '' });
 
-    let type = item.type || 'perFamily';
+    let type = item.type === 'shared' ? 'shared' : 'perFamily';
+    let category = item.category || null;
+
+    const catChip = el('button', {
+      class: 'cat-chip wide',
+      onclick: () => openCategoryPicker(category, (picked) => {
+        category = picked;
+        catChip.textContent = picked || DEFAULT_CATEGORY;
+      }),
+    }, category || DEFAULT_CATEGORY);
+
+    const privateCheck = el('input', { type: 'checkbox', checked: !!item.private });
+    const privateField = el('label', { class: 'check-row', hidden: type !== 'perFamily' },
+      privateCheck,
+      el('span', {}, '🔒 פריט פרטי — רק המשפחה שלנו רואה אותו'),
+    );
+
+    const respSelect = el('select', {},
+      el('option', { value: '' }, '— עדיין אין אחראי —'),
+      Object.entries(families).map(([id, f]) =>
+        el('option', { value: id, selected: id === item.responsibleFamilyId }, f.name)),
+    );
+    const respField = el('div', { class: 'field', hidden: type !== 'shared' },
+      el('label', {}, 'מי אחראי?'), respSelect);
+
     const radios = el('div', { class: 'radio-cards' },
       radioCard('perFamily', '👨‍👩‍👧‍👦 כל משפחה מביאה לעצמה'),
       radioCard('shared', '🤝 פריט משותף — משפחה אחת אחראית'),
@@ -141,24 +281,18 @@ export function renderGear(view, ctx) {
         radios.querySelectorAll('.radio-card').forEach((c) => c.classList.remove('selected'));
         card.classList.add('selected');
         respField.hidden = value !== 'shared';
+        privateField.hidden = value !== 'perFamily';
       });
       return card;
     }
 
-    const respSelect = el('select', {},
-      el('option', { value: '' }, '— עדיין אין אחראי —'),
-      Object.entries(families).map(([id, f]) =>
-        el('option', { value: id, selected: id === item.responsibleFamilyId }, f.name)),
-    );
-    const respField = el('div', { class: 'field', hidden: type !== 'shared' },
-      el('label', {}, 'מי אחראי?'), respSelect);
-
     const { close } = openModal('עריכת פריט', el('div', {},
       el('div', { class: 'field' }, el('label', {}, 'שם הפריט'), nameIn),
+      el('div', { class: 'field' }, el('label', {}, 'קטגוריה'), catChip),
       el('div', { class: 'field' }, el('label', {}, 'סוג הפריט'), radios),
       respField,
-      el('div', { class: 'field' }, el('label', {}, 'קטגוריה'), catIn),
-      el('div', { class: 'field' }, el('label', {}, 'הערה'), notesIn),
+      privateField,
+      el('div', { class: 'field', style: 'margin-top:14px' }, el('label', {}, 'הערה'), notesIn),
       el('div', { class: 'actions' },
         el('button', { class: 'btn danger-text', onclick: del }, 'מחיקה'),
         el('button', { class: 'btn secondary', onclick: () => close() }, 'ביטול'),
@@ -169,19 +303,31 @@ export function renderGear(view, ctx) {
     async function save() {
       const name = nameIn.value.trim();
       if (!name) { toast('צריך שם לפריט 🙂'); return; }
+
       const fields = {
         name, type,
-        category: catIn.value.trim() || null,
+        category: category || null,
         notes: notesIn.value.trim() || null,
       };
+
       if (type === 'shared') {
         fields.responsibleFamilyId = respSelect.value || null;
         if (!respSelect.value) fields.packed = null;
         if (item.type !== 'shared') fields.checked = null;
+        fields.private = null;
+        fields.ownerFamilyId = null;
       } else {
         fields.responsibleFamilyId = null;
         fields.packed = null;
+        if (privateCheck.checked) {
+          fields.private = true;
+          fields.ownerFamilyId = item.ownerFamilyId || myFamilyId;
+        } else {
+          fields.private = null;
+          fields.ownerFamilyId = null;
+        }
       }
+
       await updateGearItem(tripId, itemId, fields);
       close();
     }
@@ -194,4 +340,34 @@ export function renderGear(view, ctx) {
       }
     }
   }
+}
+
+/* ---------- עזרים ---------- */
+
+function categoryOf(item) {
+  return (item.category || '').trim() || DEFAULT_CATEGORY;
+}
+
+function knownCategories(items) {
+  const seen = [];
+  for (const [, item] of items) {
+    const cat = categoryOf(item);
+    if (!seen.includes(cat)) seen.push(cat);
+  }
+  return seen;
+}
+
+function groupByCategory(items) {
+  const map = new Map();
+  for (const entry of items) {
+    const cat = categoryOf(entry[1]);
+    if (!map.has(cat)) map.set(cat, []);
+    map.get(cat).push(entry);
+  }
+  // "כללי" תמיד ראשונה; שאר הקטגוריות לפי סדר ההופעה (sort יציב)
+  return [...map.entries()].sort((a, b) => {
+    if (a[0] === DEFAULT_CATEGORY) return -1;
+    if (b[0] === DEFAULT_CATEGORY) return 1;
+    return 0;
+  });
 }

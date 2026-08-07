@@ -117,6 +117,15 @@ export function deleteStop(tripId, dayKey, stopId) {
   return removeAt(`trips/${tripId}/itinerary/${dayKey}/stops/${stopId}`);
 }
 
+// העברת עצירה בין ימים (ובין "רעיונות" ליום מסוים) — כתיבה אחת אטומית
+export function moveStop(tripId, fromDay, toDay, stopId, stop, order) {
+  if (fromDay === toDay) return Promise.resolve();
+  return updateAt('/', {
+    [`trips/${tripId}/itinerary/${fromDay}/stops/${stopId}`]: null,
+    [`trips/${tripId}/itinerary/${toDay}/stops/${stopId}`]: { ...stop, order },
+  });
+}
+
 export function swapStops(tripId, dayKey, aId, aOrder, bId, bOrder) {
   return updateAt(`trips/${tripId}/itinerary/${dayKey}/stops`, {
     [`${aId}/order`]: bOrder,
@@ -182,6 +191,13 @@ export function tripDays(meta) {
 export function fmtDay(dayKey) {
   const d = new Date(dayKey + 'T12:00:00');
   return `יום ${DAY_NAMES[d.getDay()]} · ${d.getDate()}.${d.getMonth() + 1}`;
+}
+
+// מקומות שנאספו כרעיון ועוד לא שובצו ליום — נשמרים כ"יום" וירטואלי
+export const IDEAS_DAY = 'ideas';
+
+export function dayLabel(dayKey) {
+  return dayKey === IDEAS_DAY ? '💡 רעיונות' : fmtDay(dayKey);
 }
 
 export function fmtRange(meta) {
