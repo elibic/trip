@@ -128,6 +128,14 @@
 
     for (const id of ['icon', 'title', 'body']) $(id).addEventListener('input', renderPreview);
     $('action').addEventListener('change', renderPreview);
+
+    // מילוי מראש מהכתובת: admin.html?title=...&body=...&icon=...&refresh=1
+    const params = new URLSearchParams(location.search);
+    if (params.get('title')) $('title').value = params.get('title');
+    if (params.get('body')) $('body').value = params.get('body');
+    if (params.get('icon')) $('icon').value = params.get('icon');
+    if (params.get('refresh') === '1') $('action').checked = true;
+
     renderPreview();
 
     $('send').addEventListener('click', async () => {
