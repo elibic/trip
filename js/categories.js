@@ -81,32 +81,135 @@ export function openCategoryPicker({ current, categories, suggestions = [], onPi
   }
 }
 
-/* צ'יפ קטגוריה על שורת פריט — לחיצה משנה את הקטגוריה מיד, בלי מודאל עריכה */
-export function rowCategoryChip({ item, categories, suggestions, onPick }) {
+/* איזו שורה פתוחה כרגע עם רצועת קטגוריות — נשמר בין רינדורים */
+let openStripFor = null;
+
+/* צ'יפ קטגוריה על שורת פריט — פותח רצועה קומפקטית בתוך השורה, בלי חלון */
+export function rowCategoryChip({ itemId, item, categories, suggestions, onPick }) {
   const tagged = !!(item.category || '').trim();
-  return el('button', {
+  const chip = el('button', {
     class: `row-cat-chip${tagged ? '' : ' untagged'}`,
     'aria-label': 'שינוי קטגוריה',
     onclick: (e) => {
       e.stopPropagation();
-      openCategoryPicker({
-        current: item.category || null, categories, suggestions, onPick,
-      });
+      toggleStrip();
     },
   }, tagged ? item.category : '＋ קטגוריה');
+
+  // אחרי רינדור מחדש — פתיחה מחדש של הרצועה שהייתה פתוחה
+  if (openStripFor === itemId) queueMicrotask(() => chip.isConnected && showStrip());
+
+  function toggleStrip() {
+    if (openStripFor === itemId) { closeStrip(); return; }
+    openStripFor = itemId;
+    showStrip();
+  }
+
+  function closeStrip() {
+    openStripFor = null;
+    document.querySelectorAll('.cat-strip').forEach((s) => s.remove());
+  }
+
+  function showStrip() {
+    document.querySelectorAll('.cat-strip').forEach((s) => s.remove());
+
+    const row = chip.closest('.list-item');
+    if (!row) return;
+
+    const current = (item.category || '').trim();
+    const options = [
+      { label: DEFAULT_CATEGORY, value: null },
+      ...categories.filter((c) => c !== DEFAULT_CATEGORY).map((c) => ({ label: c, value: c })),
+      ...suggestions.filter((s) => !categories.includes(s)).map((s) => ({ label: s, value: s, isNew: true })),
+    ];
+
+    let activeChip = null;
+    const strip = el('div', { class: 'cat-strip' },
+      options.map((opt) => {
+        const isActive = (opt.value || '') === current;
+        const b = el('button', {
+          class: `strip-chip${isActive ? ' active' : ''}${opt.isNew ? ' suggested' : ''}`,
+          onclick: (e) => { e.stopPropagation(); pick(opt.value); },
+        }, opt.label);
+        if (isActive) activeChip = b;
+        return b;
+      }),
+      el('button', {
+        class: 'strip-chip new',
+        onclick: (e) => {
+          e.stopPropagation();
+          closeStrip();
+          openCategoryPicker({ current: item.category || null, categories, suggestions, onPick });
+        },
+      }, '＋ חדשה'),
+    );
+
+    row.after(strip);
+    activeChip?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    strip.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+    // הקשה מחוץ לרצועה סוגרת אותה
+    setTimeout(() => {
+      document.addEventListener('pointerdown', function onOutside(e) {
+        if (strip.contains(e.target) || chip.contains(e.target)) return;
+        document.removeEventListener('pointerdown', onOutside);
+        if (openStripFor === itemId) closeStrip();
+      });
+    }, 0);
+  }
+
+  function pick(value) {
+    openStripFor = null;
+    document.querySelectorAll('.cat-strip').forEach((s) => s.remove());
+    onPick(value);
+  }
+
+  return chip;
 }
 
 /* צ'יפ בחירת קטגוריה לשורת ההוספה */
-export function categoryChip({ state, categories, suggestions, className = 'cat-chip' }) {
+export function categoryChip({ state, categories, suggestions, className = 'cat-chip', onChange }) {
   const chip = el('button', {
     class: className,
     onclick: () => openCategoryPicker({
       current: state.category, categories, suggestions,
       onPick: (picked) => {
         state.category = picked;
-        chip.textContent = picked || DEFAULT_CATEGORY;
+        if (onChange) onChange(picked);
+        else chip.textContent = picked || DEFAULT_CATEGORY;
       },
     }),
   }, state.category || DEFAULT_CATEGORY);
   return chip;
+}
+
+/* חיווי "מוסיפים ל: X" בשורת ההוספה — בולט כשקטגוריה פעילה */
+export function addTargetChip({ state, categories, suggestions, onChange }) {
+  const active = !!state.category;
+
+  const open = () => openCategoryPicker({
+    current: state.category, categories, suggestions,
+    onPick: (picked) => { state.category = picked; onChange(picked); },
+  });
+
+  if (!active) {
+    return el('button', { class: 'cat-chip', onclick: open }, `${DEFAULT_CATEGORY} ▾`);
+  }
+
+  return el('span', { class: 'add-target' },
+    el('button', { class: 'nm', onclick: open }, 'מוסיפים ל: ', el('b', {}, state.category)),
+    el('button', {
+      class: 'x', 'aria-label': 'ביטול הקטגוריה',
+      onclick: () => { state.category = null; onChange(null); },
+    }, '✕'),
+  );
+}
+
+/* כפתור ＋ בכותרת קטגוריה — מכוון את שורת ההוספה לקטגוריה הזו */
+export function categoryAddButton(category, onPick) {
+  return el('button', {
+    class: 'cat-add', 'aria-label': `הוספה ל${category}`,
+    title: `הוספה ל${category}`,
+    onclick: () => onPick(category === DEFAULT_CATEGORY ? null : category),
+  }, '＋');
 }

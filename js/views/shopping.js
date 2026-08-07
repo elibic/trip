@@ -1,10 +1,13 @@
-import { el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab } from '../ui.js';
+import {
+  el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab, focusQuickAdd,
+} from '../ui.js';
 import {
   addShoppingItem, updateShoppingItem, deleteShoppingItem,
   setBought, claimShopping, clearBoughtItems,
 } from '../store.js';
 import {
-  SHOPPING_CATEGORIES, knownCategories, groupByCategory, categoryChip, rowCategoryChip,
+  SHOPPING_CATEGORIES, knownCategories, groupByCategory, categoryChip,
+  rowCategoryChip, addTargetChip, categoryAddButton,
 } from '../categories.js';
 
 // הקטגוריה שנבחרה לשורת ההוספה — נשמרת בין רינדורים
@@ -38,11 +41,12 @@ export function renderShopping(view, ctx) {
   const card = el('div', { class: 'card' });
 
   const addRow = quickAddRow(addKey, {
-    placeholder: 'פיתות, גחלים, מים…',
+    placeholder: addState.category ? `הוספה ל${addState.category}…` : 'פיתות, גחלים, מים…',
     onAdd: (name) => addShoppingItem(tripId, { name, category: addState.category || null }),
   });
-  addRow.append(categoryChip({
+  addRow.append(addTargetChip({
     state: addState, categories, suggestions: SHOPPING_CATEGORIES,
+    onChange: () => { ctx.refresh(); focusQuickAdd(addKey); },
   }));
   card.append(addRow);   // ההוספה בראש — לא צריך לגלול
 
@@ -55,6 +59,7 @@ export function renderShopping(view, ctx) {
       card.append(el('div', { class: 'cat-head' },
         el('span', { class: 'nm' }, category),
         el('span', { class: 'count' }, list.filter(([, i]) => !i.bought).length || '✓'),
+        categoryAddButton(category, startAddingTo),
       ));
     }
     for (const [itemId, item] of list) card.append(itemRow(itemId, item));
@@ -67,6 +72,13 @@ export function renderShopping(view, ctx) {
       'כל משפחה יכולה לקחת על עצמה מוצרים בכפתור "אנחנו נקנה".'));
   } else {
     view.append(addFab(addKey, 'מוצר'));
+  }
+
+  // בחירת קטגוריה יעד להוספה — מרנדר מחדש וקופץ לשדה
+  function startAddingTo(category) {
+    addState.category = category;
+    ctx.refresh();
+    focusQuickAdd(addKey);
   }
 
   /* ---------- שורה ---------- */
@@ -86,7 +98,7 @@ export function renderShopping(view, ctx) {
 
     const parts = [item.qty, item.notes].filter(Boolean);
     const catChip = rowCategoryChip({
-      item, categories, suggestions: SHOPPING_CATEGORIES,
+      itemId, item, categories, suggestions: SHOPPING_CATEGORIES,
       onPick: (picked) => updateShoppingItem(tripId, itemId, { category: picked || null }),
     });
 

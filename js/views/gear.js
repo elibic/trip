@@ -1,10 +1,13 @@
-import { el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab } from '../ui.js';
+import {
+  el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab, focusQuickAdd,
+} from '../ui.js';
 import {
   addGearItem, updateGearItem, deleteGearItem,
   setGearChecked, claimShared, setPacked,
 } from '../store.js';
 import {
-  GEAR_CATEGORIES, knownCategories, groupByCategory, categoryChip, rowCategoryChip,
+  GEAR_CATEGORIES, knownCategories, groupByCategory,
+  rowCategoryChip, addTargetChip, categoryAddButton,
 } from '../categories.js';
 
 // הקטגוריה והמצב הפרטי שנבחרו לשורת ההוספה — נשמרים בין רינדורים
@@ -65,6 +68,7 @@ function renderGearList(view, ctx, opts) {
       card.append(el('div', { class: 'cat-head' },
         el('span', { class: 'nm' }, category),
         el('span', { class: 'count' }, list.length),
+        categoryAddButton(category, startAddingTo),
       ));
     }
     for (const [itemId, item] of list) card.append(row(itemId, item));
@@ -74,11 +78,18 @@ function renderGearList(view, ctx, opts) {
   if (items.length === 0) view.append(el('p', { class: 'list-hint' }, emptyHint));
   else view.append(addFab(addKey, 'פריט'));
 
+  // בחירת קטגוריה יעד להוספה — מרנדר מחדש וקופץ לשדה
+  function startAddingTo(category) {
+    addState[type].category = category;
+    ctx.refresh();
+    focusQuickAdd(addKey);
+  }
+
   function buildAddRow({ type, placeholder }) {
     const st = addState[type];
 
-    const row = quickAddRow(`gear-${type}-${tripId}`, {
-      placeholder,
+    const row = quickAddRow(addKey, {
+      placeholder: st.category ? `הוספה ל${st.category}…` : placeholder,
       onAdd: (name) => addGearItem(tripId, {
         name, type,
         category: st.category || null,
@@ -104,8 +115,9 @@ function renderGearList(view, ctx, opts) {
       row.append(lock);
     }
 
-    row.append(categoryChip({
+    row.append(addTargetChip({
       state: st, categories, suggestions: GEAR_CATEGORIES,
+      onChange: () => { ctx.refresh(); focusQuickAdd(addKey); },
     }));
 
     return row;
@@ -196,7 +208,7 @@ function renderGearList(view, ctx, opts) {
   /* תיוג בהקשה אחת — הקטגוריה נשמרת מיד */
   function catChipFor(itemId, item) {
     return rowCategoryChip({
-      item, categories, suggestions: GEAR_CATEGORIES,
+      itemId, item, categories, suggestions: GEAR_CATEGORIES,
       onPick: (picked) => updateGearItem(tripId, itemId, { category: picked || null }),
     });
   }
