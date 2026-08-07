@@ -3,12 +3,9 @@ import {
   addGearItem, updateGearItem, deleteGearItem,
   setGearChecked, claimShared, setPacked,
 } from '../store.js';
-
-const DEFAULT_CATEGORY = 'כללי';
-const SUGGESTED_CATEGORIES = [
-  'לינה', 'מטבח ואוכל', 'בגדים', 'ילדים',
-  'חוף ובריכה', 'עזרה ראשונה', 'אלקטרוניקה', 'ניקיון',
-];
+import {
+  GEAR_CATEGORIES, knownCategories, groupByCategory, categoryChip,
+} from '../categories.js';
 
 // הקטגוריה והמצב הפרטי שנבחרו לשורת ההוספה — נשמרים בין רינדורים
 const addState = {
@@ -103,14 +100,9 @@ export function renderGear(view, ctx) {
       row.append(lock);
     }
 
-    const chip = el('button', {
-      class: 'cat-chip',
-      onclick: () => openCategoryPicker(st.category, (picked) => {
-        st.category = picked;
-        chip.textContent = picked || DEFAULT_CATEGORY;
-      }),
-    }, st.category || DEFAULT_CATEGORY);
-    row.append(chip);
+    row.append(categoryChip({
+      state: st, categories, suggestions: GEAR_CATEGORIES,
+    }));
 
     return row;
   }
@@ -195,46 +187,6 @@ export function renderGear(view, ctx) {
     }, '⋯');
   }
 
-  /* ---------- בחירת קטגוריה ---------- */
-
-  function openCategoryPicker(current, onPick) {
-    const options = [DEFAULT_CATEGORY, ...categories.filter((c) => c !== DEFAULT_CATEGORY)];
-    const suggestions = SUGGESTED_CATEGORIES.filter((s) => !options.includes(s));
-
-    const list = el('div', { class: 'fam-list', style: 'max-width:none' },
-      options.map((cat) => el('button', {
-        class: 'fam-pick', onclick: () => pick(cat === DEFAULT_CATEGORY ? null : cat),
-      },
-        el('span', { style: 'flex:1;text-align:start' }, cat),
-        (current || DEFAULT_CATEGORY) === cat ? el('span', { style: 'color:var(--primary)' }, '✓') : null,
-      )),
-    );
-
-    const newIn = el('input', { type: 'text', placeholder: 'שם הקטגוריה', maxlength: 25 });
-    newIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addNew(); } });
-
-    const { close } = openModal('קטגוריה', el('div', {},
-      list,
-      suggestions.length ? el('div', { class: 'suggest-row' },
-        suggestions.map((s) => el('button', { class: 'map-chip', onclick: () => pick(s) }, `＋ ${s}`))) : null,
-      el('div', { class: 'field', style: 'margin-top:14px' },
-        el('label', {}, 'קטגוריה חדשה'),
-        el('div', { class: 'row2' }, newIn, el('button', { class: 'btn', onclick: addNew }, 'הוספה')),
-      ),
-    ));
-
-    function addNew() {
-      const name = newIn.value.trim();
-      if (!name) { toast('צריך שם לקטגוריה 🙂'); return; }
-      pick(name);
-    }
-
-    function pick(value) {
-      onPick(value);
-      close();
-    }
-  }
-
   /* ---------- מודאל עריכה ---------- */
 
   function openItemModal(itemId, item) {
@@ -242,15 +194,10 @@ export function renderGear(view, ctx) {
     const notesIn = el('input', { type: 'text', placeholder: 'לא חובה', maxlength: 120, value: item.notes || '' });
 
     let type = item.type === 'shared' ? 'shared' : 'perFamily';
-    let category = item.category || null;
-
-    const catChip = el('button', {
-      class: 'cat-chip wide',
-      onclick: () => openCategoryPicker(category, (picked) => {
-        category = picked;
-        catChip.textContent = picked || DEFAULT_CATEGORY;
-      }),
-    }, category || DEFAULT_CATEGORY);
+    const editCat = { category: item.category || null };
+    const catChip = categoryChip({
+      state: editCat, categories, suggestions: GEAR_CATEGORIES, className: 'cat-chip wide',
+    });
 
     const privateCheck = el('input', { type: 'checkbox', checked: !!item.private });
     const privateField = el('label', { class: 'check-row', hidden: type !== 'perFamily' },
@@ -306,7 +253,7 @@ export function renderGear(view, ctx) {
 
       const fields = {
         name, type,
-        category: category || null,
+        category: editCat.category || null,
         notes: notesIn.value.trim() || null,
       };
 
@@ -342,32 +289,3 @@ export function renderGear(view, ctx) {
   }
 }
 
-/* ---------- עזרים ---------- */
-
-function categoryOf(item) {
-  return (item.category || '').trim() || DEFAULT_CATEGORY;
-}
-
-function knownCategories(items) {
-  const seen = [];
-  for (const [, item] of items) {
-    const cat = categoryOf(item);
-    if (!seen.includes(cat)) seen.push(cat);
-  }
-  return seen;
-}
-
-function groupByCategory(items) {
-  const map = new Map();
-  for (const entry of items) {
-    const cat = categoryOf(entry[1]);
-    if (!map.has(cat)) map.set(cat, []);
-    map.get(cat).push(entry);
-  }
-  // "כללי" תמיד ראשונה; שאר הקטגוריות לפי סדר ההופעה (sort יציב)
-  return [...map.entries()].sort((a, b) => {
-    if (a[0] === DEFAULT_CATEGORY) return -1;
-    if (b[0] === DEFAULT_CATEGORY) return 1;
-    return 0;
-  });
-}

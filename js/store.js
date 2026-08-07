@@ -103,6 +103,35 @@ export function setPacked(tripId, itemId, on) {
   return on ? setAt(path, true) : removeAt(path);
 }
 
+/* ---------- קניות ---------- */
+
+export function addShoppingItem(tripId, item) {
+  return pushTo(`trips/${tripId}/shopping`, { ...item, createdAt: Date.now() });
+}
+
+export function updateShoppingItem(tripId, itemId, fields) {
+  return updateAt(`trips/${tripId}/shopping/${itemId}`, fields);
+}
+
+export function deleteShoppingItem(tripId, itemId) {
+  return removeAt(`trips/${tripId}/shopping/${itemId}`);
+}
+
+export function setBought(tripId, itemId, on) {
+  const path = `trips/${tripId}/shopping/${itemId}/bought`;
+  return on ? setAt(path, true) : removeAt(path);
+}
+
+export function claimShopping(tripId, itemId, famId) {
+  const path = `trips/${tripId}/shopping/${itemId}/buyerFamilyId`;
+  return famId ? setAt(path, famId) : removeAt(path);
+}
+
+export function clearBoughtItems(tripId, itemIds) {
+  return updateAt(`trips/${tripId}/shopping`,
+    Object.fromEntries(itemIds.map((id) => [id, null])));
+}
+
 /* ---------- מסלול ---------- */
 
 export function addStop(tripId, dayKey, stop) {
