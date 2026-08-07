@@ -19,8 +19,19 @@ export function subscribeIndex(cb) {
   return subscribe('tripsIndex', cb);
 }
 
+let latestTrip = null;
+
 export function subscribeTrip(tripId, cb) {
-  return subscribe(`trips/${tripId}`, cb);
+  return subscribe(`trips/${tripId}`, (data) => {
+    latestTrip = data;
+    cb(data);
+  });
+}
+
+// התמונה העדכנית של הטיול — למסכים שנפתחים מעל התצוגה (כמו חיפוש מקומות)
+// ומחזיקים ברפרנס ישן אחרי שהנתונים התעדכנו
+export function currentTrip() {
+  return latestTrip;
 }
 
 /* ---------- טיולים ---------- */

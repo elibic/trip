@@ -87,9 +87,9 @@ export function quickAddRow(key, { placeholder, onAdd, multiline = true }) {
 
 /* ---------- מודאל (bottom sheet) ---------- */
 
-export function openModal(title, body, { onClose } = {}) {
+export function openModal(title, body, { onClose, className = '' } = {}) {
   const root = document.getElementById('modal-root');
-  const modal = el('div', { class: 'modal' }, title ? el('h2', {}, title) : null, body);
+  const modal = el('div', { class: `modal ${className}`.trim() }, title ? el('h2', {}, title) : null, body);
   const back = el('div', { class: 'modal-back' }, modal);
   back.addEventListener('click', (e) => { if (e.target === back) close(); });
   function close() {
