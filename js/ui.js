@@ -151,6 +151,70 @@ export function flashItem(itemId) {
   setTimeout(() => row.classList.remove('flash'), 1600);
 }
 
+/* ---------- רצועת פעולות בתוך השורה ----------
+   כפתור שפותח רצועה קומפקטית מתחת לשורה, במקום חלון.
+   רצועה אחת פתוחה בכל רגע, והיא נפתחת מחדש אחרי רינדור. */
+
+let openStripKey = null;
+let stripAbort = null;   // מבטל מאזיני "לחיצה בחוץ" של רצועות קודמות
+
+export function stripButton({ key, className, content, title, chips }) {
+  const btn = el('button', {
+    class: className, title, 'aria-label': title,
+    onclick: (e) => { e.stopPropagation(); toggle(); },
+  }, content);
+
+  if (openStripKey === key) queueMicrotask(() => btn.isConnected && show());
+
+  function toggle() {
+    if (openStripKey === key) { close(); return; }
+    openStripKey = key;
+    show();
+  }
+
+  function close() {
+    openStripKey = null;
+    stripAbort?.abort();
+    stripAbort = null;
+    document.querySelectorAll('.cat-strip').forEach((s) => s.remove());
+  }
+
+  function show() {
+    stripAbort?.abort();          // בלי זה מאזין ישן היה סוגר את הרצועה החדשה
+    stripAbort = new AbortController();
+    document.querySelectorAll('.cat-strip').forEach((s) => s.remove());
+    const row = btn.closest('.list-item');
+    if (!row) return;
+
+    let activeChip = null;
+    const strip = el('div', { class: 'cat-strip' }, chips().map((c) => {
+      if (c.label === null) return el('span', { class: 'strip-sep' });
+      if (c.static) return el('span', { class: 'strip-label' }, c.text);
+      const b = el('button', {
+        class: `strip-chip${c.active ? ' active' : ''}${c.class ? ` ${c.class}` : ''}`,
+        onclick: (e) => { e.stopPropagation(); close(); c.onPick(); },
+      }, c.label);
+      if (c.active) activeChip = b;
+      return b;
+    }));
+
+    row.after(strip);
+    activeChip?.scrollIntoView({ inline: 'center', block: 'nearest' });
+    strip.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+
+    const { signal } = stripAbort;
+    setTimeout(() => {
+      if (signal.aborted) return;
+      document.addEventListener('pointerdown', (e) => {
+        if (strip.contains(e.target) || btn.contains(e.target)) return;
+        if (openStripKey === key) close();
+      }, { signal });
+    }, 0);
+  }
+
+  return btn;
+}
+
 /* ---------- Empty state ---------- */
 
 export function emptyState(icon, message, cta) {

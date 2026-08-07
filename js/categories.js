@@ -1,5 +1,5 @@
 /* קטגוריות משותפות לרשימות (ציוד וקניות) */
-import { el, openModal, toast } from './ui.js';
+import { el, openModal, toast, stripButton } from './ui.js';
 
 export const DEFAULT_CATEGORY = 'כללי';
 
@@ -81,90 +81,38 @@ export function openCategoryPicker({ current, categories, suggestions = [], onPi
   }
 }
 
-/* איזו שורה פתוחה כרגע עם רצועת קטגוריות — נשמר בין רינדורים */
-let openStripFor = null;
-
 /* צ'יפ קטגוריה על שורת פריט — פותח רצועה קומפקטית בתוך השורה, בלי חלון */
 export function rowCategoryChip({ itemId, item, categories, suggestions, onPick }) {
   const tagged = !!(item.category || '').trim();
-  const chip = el('button', {
-    class: `row-cat-chip${tagged ? '' : ' untagged'}`,
-    'aria-label': 'שינוי קטגוריה',
-    onclick: (e) => {
-      e.stopPropagation();
-      toggleStrip();
-    },
-  }, tagged ? item.category : '＋ קטגוריה');
-
-  // אחרי רינדור מחדש — פתיחה מחדש של הרצועה שהייתה פתוחה
-  if (openStripFor === itemId) queueMicrotask(() => chip.isConnected && showStrip());
-
-  function toggleStrip() {
-    if (openStripFor === itemId) { closeStrip(); return; }
-    openStripFor = itemId;
-    showStrip();
-  }
-
-  function closeStrip() {
-    openStripFor = null;
-    document.querySelectorAll('.cat-strip').forEach((s) => s.remove());
-  }
-
-  function showStrip() {
-    document.querySelectorAll('.cat-strip').forEach((s) => s.remove());
-
-    const row = chip.closest('.list-item');
-    if (!row) return;
-
-    const current = (item.category || '').trim();
-    const options = [
-      { label: DEFAULT_CATEGORY, value: null },
-      ...categories.filter((c) => c !== DEFAULT_CATEGORY).map((c) => ({ label: c, value: c })),
-      ...suggestions.filter((s) => !categories.includes(s)).map((s) => ({ label: s, value: s, isNew: true })),
-    ];
-
-    let activeChip = null;
-    const strip = el('div', { class: 'cat-strip' },
-      options.map((opt) => {
-        const isActive = (opt.value || '') === current;
-        const b = el('button', {
-          class: `strip-chip${isActive ? ' active' : ''}${opt.isNew ? ' suggested' : ''}`,
-          onclick: (e) => { e.stopPropagation(); pick(opt.value); },
-        }, opt.label);
-        if (isActive) activeChip = b;
-        return b;
-      }),
-      el('button', {
-        class: 'strip-chip new',
-        onclick: (e) => {
-          e.stopPropagation();
-          closeStrip();
-          openCategoryPicker({ current: item.category || null, categories, suggestions, onPick });
+  return stripButton({
+    key: `cat:${itemId}`,
+    className: `row-cat-chip${tagged ? '' : ' untagged'}`,
+    title: 'שינוי קטגוריה',
+    content: tagged ? item.category : '＋ קטגוריה',
+    chips: () => {
+      const current = (item.category || '').trim();
+      const options = [
+        { label: DEFAULT_CATEGORY, value: null },
+        ...categories.filter((c) => c !== DEFAULT_CATEGORY).map((c) => ({ label: c, value: c })),
+        ...suggestions.filter((s) => !categories.includes(s))
+          .map((s) => ({ label: s, value: s, isNew: true })),
+      ];
+      return [
+        ...options.map((o) => ({
+          label: o.label,
+          active: (o.value || '') === current,
+          class: o.isNew ? 'suggested' : '',
+          onPick: () => onPick(o.value),
+        })),
+        {
+          label: '＋ חדשה', class: 'new',
+          onPick: () => openCategoryPicker({
+            current: item.category || null, categories, suggestions, onPick,
+          }),
         },
-      }, '＋ חדשה'),
-    );
-
-    row.after(strip);
-    activeChip?.scrollIntoView({ inline: 'center', block: 'nearest' });
-    strip.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-
-    // הקשה מחוץ לרצועה סוגרת אותה
-    setTimeout(() => {
-      document.addEventListener('pointerdown', function onOutside(e) {
-        if (strip.contains(e.target) || chip.contains(e.target)) return;
-        document.removeEventListener('pointerdown', onOutside);
-        if (openStripFor === itemId) closeStrip();
-      });
-    }, 0);
-  }
-
-  function pick(value) {
-    openStripFor = null;
-    document.querySelectorAll('.cat-strip').forEach((s) => s.remove());
-    onPick(value);
-  }
-
-  return chip;
+      ];
+    },
+  });
 }
 
 /* צ'יפ בחירת קטגוריה לשורת ההוספה */

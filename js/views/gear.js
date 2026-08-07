@@ -1,9 +1,11 @@
 import {
   el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab, focusQuickAdd, flashItem,
+  stripButton,
 } from '../ui.js';
 import {
   addGearItem, updateGearItem, deleteGearItem,
   setGearChecked, claimShared, setPacked, findByName, normalizeName,
+  setGearType, moveGearToShopping,
 } from '../store.js';
 import {
   GEAR_CATEGORIES, knownCategories, groupByCategory,
@@ -180,6 +182,7 @@ function renderGearList(view, ctx, opts) {
     if (item.private) {
       sub = el('div', { class: 'sub' },
         catChipFor(itemId, item),
+        item.fromShopping ? el('span', { class: 'bought-badge' }, '🛒 נקנה') : null,
         el('span', { class: 'private-badge' }, '🔒 פרטי'),
         item.notes ? ` ${item.notes}` : '');
     } else {
@@ -187,6 +190,7 @@ function renderGearList(view, ctx, opts) {
       const doneCount = famIds.filter((id) => checked[id]).length;
       sub = el('div', { class: 'sub' },
         catChipFor(itemId, item),
+        item.fromShopping ? el('span', { class: 'bought-badge' }, '🛒 נקנה') : null,
         el('span', { class: 'dots' },
           famIds.map((id) => el('span', {
             class: `dot${checked[id] ? ' on' : ''}`,
@@ -213,10 +217,55 @@ function renderGearList(view, ctx, opts) {
   }
 
   function menuBtn(itemId, item) {
-    return el('button', {
-      class: 'iconbtn-soft', 'aria-label': 'עריכה',
-      onclick: () => openItemModal(itemId, item),
-    }, '⋯');
+    return stripButton({
+      key: `menu:${itemId}`,
+      className: 'iconbtn-soft',
+      title: 'העברה, עריכה ומחיקה',
+      content: '⋯',
+      chips: () => [
+        { static: true, text: 'העברה אל:' },
+        {
+          label: '🎒 ציוד אישי', active: type !== 'shared',
+          onPick: () => moveTo(itemId, item, 'perFamily'),
+        },
+        {
+          label: '🤝 ציוד לכולם', active: type === 'shared',
+          onPick: () => moveTo(itemId, item, 'shared'),
+        },
+        { label: '🛒 קניות', onPick: () => toShopping(itemId, item) },
+        { label: null },
+        { label: '✏️ עריכה', onPick: () => openItemModal(itemId, item) },
+        { label: '🗑️ מחיקה', class: 'danger', onPick: () => removeItem(itemId, item) },
+      ],
+    });
+  }
+
+  /* ---------- העברה בין הרשימות ---------- */
+
+  async function moveTo(itemId, item, target) {
+    if ((item.type === 'shared' ? 'shared' : 'perFamily') === target) return;
+    const dest = target === 'shared' ? 'ציוד לכולם' : 'ציוד אישי';
+    const other = (trip.gear ? Object.entries(trip.gear) : [])
+      .filter(([id, g]) => id !== itemId
+        && (g.type === 'shared' ? 'shared' : 'perFamily') === target
+        && (!g.private || g.ownerFamilyId === myFamilyId));
+    if (findByName(other, item.name)) { toast(`"${item.name}" כבר ב${dest}`); return; }
+    await setGearType(tripId, itemId, target);
+    toast(`"${item.name}" עבר ל${dest} ✅`);
+  }
+
+  async function toShopping(itemId, item) {
+    const shopping = Object.entries(trip.shopping || {});
+    if (findByName(shopping, item.name)) { toast(`"${item.name}" כבר ברשימת הקניות`); return; }
+    await moveGearToShopping(tripId, itemId, item);
+    toast(`"${item.name}" עבר לרשימת הקניות 🛒`);
+  }
+
+  async function removeItem(itemId, item) {
+    if (await confirmDialog(`למחוק את "${item.name}"?`)) {
+      deleteGearItem(tripId, itemId);
+      toast('הפריט נמחק');
+    }
   }
 
   /* תיוג בהקשה אחת — הקטגוריה נשמרת מיד */

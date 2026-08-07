@@ -1,5 +1,6 @@
 import {
   el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab, focusQuickAdd, flashItem,
+  stripButton,
 } from '../ui.js';
 import {
   addShoppingItem, updateShoppingItem, deleteShoppingItem,
@@ -146,16 +147,39 @@ export function renderShopping(view, ctx) {
             onclick: () => moveOne(itemId, item),
           }, '📦 לציוד')
         : action,
-      el('button', {
-        class: 'iconbtn-soft', 'aria-label': 'עריכה',
-        onclick: () => openItemModal(itemId, item),
-      }, '⋯'),
+      stripButton({
+        key: `menu:${itemId}`,
+        className: 'iconbtn-soft',
+        title: 'העברה, עריכה ומחיקה',
+        content: '⋯',
+        chips: () => [
+          { static: true, text: 'העברה אל:' },
+          { label: '🛒 קניות', active: true, onPick: () => {} },
+          { label: '🎒 ציוד אישי', onPick: () => moveOne(itemId, item, 'perFamily') },
+          { label: '🤝 ציוד לכולם', onPick: () => moveOne(itemId, item, 'shared') },
+          { label: null },
+          { label: '✏️ עריכה', onPick: () => openItemModal(itemId, item) },
+          { label: '🗑️ מחיקה', class: 'danger', onPick: () => removeItem(itemId, item) },
+        ],
+      }),
     );
   }
 
-  async function moveOne(itemId, item) {
-    await moveShoppingToGear(tripId, [[itemId, item]]);
-    toast(`"${item.name}" עבר לציוד לכולם 📦`);
+  async function moveOne(itemId, item, type = 'shared') {
+    const dest = type === 'shared' ? 'ציוד לכולם' : 'ציוד אישי';
+    const gear = Object.entries(trip.gear || {})
+      .filter(([, g]) => (g.type === 'shared' ? 'shared' : 'perFamily') === type
+        && (!g.private || g.ownerFamilyId === myFamilyId));
+    if (findByName(gear, item.name)) { toast(`"${item.name}" כבר ב${dest}`); return; }
+    await moveShoppingToGear(tripId, [[itemId, item]], type);
+    toast(`"${item.name}" עבר ל${dest} 📦`);
+  }
+
+  async function removeItem(itemId, item) {
+    if (await confirmDialog(`למחוק את "${item.name}" מהרשימה?`)) {
+      deleteShoppingItem(tripId, itemId);
+      toast('המוצר נמחק');
+    }
   }
 
   async function moveAllBought() {

@@ -1,3 +1,3 @@
 // הגרסה של הקוד שרץ כרגע בדפדפן.
 // ⚠️ בכל שינוי: לעדכן גם את version.json (שם נמצא גם תיאור השינויים למשתמשים).
-export const APP_VERSION = '1.6.0';
+export const APP_VERSION = '1.7.0';

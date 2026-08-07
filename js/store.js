@@ -153,9 +153,10 @@ export function clearBoughtItems(tripId, itemIds) {
 // קטגוריית ברירת מחדל למוצר שעובר לציוד בלי קטגוריה משלו
 export const SHOPPING_TO_GEAR_CATEGORY = 'אוכל';
 
-/* העברת מוצרים שנקנו לרשימת "ציוד לכולם" — מה שקנינו צריך גם לזכור לקחת.
-   entries: [[itemId, shoppingItem], ...]. הכתיבה אחת ואטומית. */
-export function moveShoppingToGear(tripId, entries) {
+/* העברת מוצרים מהקניות לרשימת ציוד — מה שקנינו צריך גם לזכור לקחת.
+   entries: [[itemId, shoppingItem], ...], type: 'shared' | 'perFamily'.
+   הכתיבה אחת ואטומית. */
+export function moveShoppingToGear(tripId, entries, type = 'shared') {
   const updates = {};
   const now = Date.now();
 
@@ -164,9 +165,10 @@ export function moveShoppingToGear(tripId, entries) {
     updates[`trips/${tripId}/shopping/${itemId}`] = null;
     updates[`trips/${tripId}/gear/${newKey(`trips/${tripId}/gear`)}`] = {
       name: item.name,
-      type: 'shared',
+      type,
       category: (item.category || '').trim() || SHOPPING_TO_GEAR_CATEGORY,
-      responsibleFamilyId: item.buyerFamilyId || null,
+      // אחריות רלוונטית רק לציוד משותף
+      ...(type === 'shared' ? { responsibleFamilyId: item.buyerFamilyId || null } : {}),
       notes,
       fromShopping: true,   // הגיע מרשימת הקניות — כבר נקנה
       createdAt: now + i,   // שמירה על סדר ההעברה
@@ -174,6 +176,28 @@ export function moveShoppingToGear(tripId, entries) {
   });
 
   return updateAt('/', updates);
+}
+
+/* העברת פריט ציוד לרשימת הקניות — כשמתברר שצריך לקנות אותו */
+export function moveGearToShopping(tripId, itemId, item) {
+  const key = newKey(`trips/${tripId}/shopping`);
+  return updateAt('/', {
+    [`trips/${tripId}/gear/${itemId}`]: null,
+    [`trips/${tripId}/shopping/${key}`]: {
+      name: item.name,
+      category: item.category || null,
+      notes: item.notes || null,
+      buyerFamilyId: item.responsibleFamilyId || null,
+      createdAt: Date.now(),
+    },
+  });
+}
+
+/* מעבר בין "ציוד אישי" ל"ציוד לכולם" — מנקה את השדות שלא רלוונטיים ליעד */
+export function setGearType(tripId, itemId, type) {
+  return updateAt(`trips/${tripId}/gear/${itemId}`, type === 'shared'
+    ? { type: 'shared', checked: null, private: null, ownerFamilyId: null }
+    : { type: 'perFamily', responsibleFamilyId: null, packed: null });
 }
 
 /* ---------- מסלול ---------- */

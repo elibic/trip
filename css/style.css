@@ -264,6 +264,16 @@ a { color: var(--primary); text-decoration: none; }
 }
 .cat-strip .strip-chip.suggested { color: var(--text-soft); border-style: dashed; }
 .cat-strip .strip-chip.new { color: var(--primary); font-weight: 700; border-style: dashed; }
+.cat-strip .strip-chip.danger { color: var(--danger); border-color: #f3c7c7; }
+.cat-strip .strip-label {
+  flex-shrink: 0; align-self: center; white-space: nowrap;
+  font-size: 12px; font-weight: 700; color: var(--text-soft);
+  margin-inline-start: 10px;
+}
+.cat-strip .strip-sep {
+  flex-shrink: 0; width: 1px; align-self: stretch;
+  background: var(--line); margin: 2px 4px;
+}
 .cat-strip .strip-chip:active { transform: scale(.95); }
 @keyframes stripIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
 
