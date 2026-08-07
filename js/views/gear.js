@@ -7,7 +7,7 @@ import {
 } from '../store.js';
 import {
   GEAR_CATEGORIES, knownCategories, groupByCategory,
-  rowCategoryChip, addTargetChip, categoryAddButton,
+  categoryChip, rowCategoryChip, addTargetChip, categoryAddButton,
 } from '../categories.js';
 
 // הקטגוריה והמצב הפרטי שנבחרו לשורת ההוספה — נשמרים בין רינדורים
