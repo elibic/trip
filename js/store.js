@@ -243,6 +243,24 @@ export function setLastTab(tripId, tab) {
   localStorage.setItem(`trip.lastTab.${tripId}`, tab);
 }
 
+/* ---------- הגנה מכתיבה כפולה ---------- */
+
+// השוואת שמות סלחנית: רווחים מיותרים, אותיות גדולות/קטנות וגרשיים שונים
+export function normalizeName(value) {
+  return String(value || '')
+    .trim().replace(/\s+/g, ' ').toLowerCase()
+    .replace(/[\u2018\u2019\u05f3]/g, "'")
+    .replace(/[\u201c\u201d\u05f4]/g, '"');
+}
+
+/* מחזיר [id, item] של פריט קיים באותו שם, או null.
+   entries: [[id, item], ...] — עובד גם על name וגם על title. */
+export function findByName(entries, name) {
+  const target = normalizeName(name);
+  if (!target) return null;
+  return entries.find(([, it]) => normalizeName(it.name ?? it.title) === target) || null;
+}
+
 /* ---------- עזרי תאריכים ---------- */
 
 const DAY_NAMES = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];

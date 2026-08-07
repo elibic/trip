@@ -140,6 +140,17 @@ export function toast(message) {
   setTimeout(() => t.remove(), 2600);
 }
 
+/* הדגשת שורה קיימת — כשמנסים להוסיף משהו שכבר ברשימה */
+export function flashItem(itemId) {
+  const row = document.querySelector(`[data-id="${CSS.escape(String(itemId))}"]`);
+  if (!row) return;
+  row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  row.classList.remove('flash');
+  void row.offsetWidth;            // אתחול האנימציה
+  row.classList.add('flash');
+  setTimeout(() => row.classList.remove('flash'), 1600);
+}
+
 /* ---------- Empty state ---------- */
 
 export function emptyState(icon, message, cta) {

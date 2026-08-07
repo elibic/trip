@@ -29,8 +29,10 @@ self.addEventListener('fetch', (e) => {
   // קובץ הגרסה חייב להגיע תמיד מהרשת, אחרת לא נדע שיש עדכון
   if (url.pathname.endsWith('/version.json')) return;
 
+  // cache:'no-cache' מאלץ אימות מול השרת בכל טעינה, כך שקובץ קוד ישן
+  // שיושב במטמון ה-HTTP לא ימשיך לרוץ אחרי שעלתה גרסה חדשה
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: 'no-cache' })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(e.request, copy));

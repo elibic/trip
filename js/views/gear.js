@@ -1,9 +1,9 @@
 import {
-  el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab, focusQuickAdd,
+  el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab, focusQuickAdd, flashItem,
 } from '../ui.js';
 import {
   addGearItem, updateGearItem, deleteGearItem,
-  setGearChecked, claimShared, setPacked,
+  setGearChecked, claimShared, setPacked, findByName, normalizeName,
 } from '../store.js';
 import {
   GEAR_CATEGORIES, knownCategories, groupByCategory,
@@ -87,16 +87,26 @@ function renderGearList(view, ctx, opts) {
 
   function buildAddRow({ type, placeholder }) {
     const st = addState[type];
+    const addedNow = new Set();   // תופס כפילויות גם בתוך הדבקה אחת
 
     const row = quickAddRow(addKey, {
       placeholder: st.category ? `הוספה ל${st.category}…` : placeholder,
-      onAdd: (name) => addGearItem(tripId, {
-        name, type,
-        category: st.category || null,
-        ...(type === 'perFamily' && st.isPrivate
-          ? { private: true, ownerFamilyId: myFamilyId }
-          : {}),
-      }),
+      onAdd: (name) => {
+        const existing = findByName(items, name);
+        if (existing || addedNow.has(normalizeName(name))) {
+          toast(`"${name}" כבר ברשימה`);
+          if (existing) flashItem(existing[0]);
+          return undefined;
+        }
+        addedNow.add(normalizeName(name));
+        return addGearItem(tripId, {
+          name, type,
+          category: st.category || null,
+          ...(type === 'perFamily' && st.isPrivate
+            ? { private: true, ownerFamilyId: myFamilyId }
+            : {}),
+        });
+      },
     });
 
     if (type === 'perFamily') {
@@ -147,7 +157,7 @@ function renderGearList(view, ctx, opts) {
     const extra = isMine ? 'אתם מביאים 💪' : (respFam && item.packed ? '✓ נארז' : null);
     const notes = [item.notes, extra].filter(Boolean).join(' · ');
 
-    return el('div', { class: 'list-item' },
+    return el('div', { class: 'list-item', dataset: { id: itemId } },
       el('div', { class: 'grow' },
         el('div', { class: 'name', style: item.packed ? 'text-decoration:line-through;opacity:.6' : '' },
           item.name),
@@ -184,7 +194,7 @@ function renderGearList(view, ctx, opts) {
       );
     }
 
-    return el('div', { class: 'list-item' },
+    return el('div', { class: 'list-item', dataset: { id: itemId } },
       el('button', {
         class: `bigcheck${myChecked ? ' on' : ''}`, 'aria-label': 'ארזנו',
         onclick: () => setGearChecked(tripId, itemId, myFamilyId, !myChecked),

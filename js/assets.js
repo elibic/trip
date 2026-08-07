@@ -1,0 +1,33 @@
+/* רשימת כל קבצי האפליקציה — משמשת את הרענון העמוק כדי לרוקן
+   את מטמון ה-HTTP של הדפדפן, שהוא מה שמחזיק גרסאות ישנות של הקוד.
+   ⚠️ קובץ חדש באפליקציה? להוסיף גם כאן (יש בדיקה שמאתרת פערים). */
+export const APP_ASSETS = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './sw.js',
+  './version.json',
+  './css/style.css',
+  './js/main.js',
+  './js/app.js',
+  './js/ui.js',
+  './js/store.js',
+  './js/firebase.js',
+  './js/firebase-config.js',
+  './js/categories.js',
+  './js/places.js',
+  './js/settle.js',
+  './js/install.js',
+  './js/update.js',
+  './js/broadcast.js',
+  './js/version.js',
+  './js/assets.js',
+  './js/views/home.js',
+  './js/views/trip.js',
+  './js/views/gear.js',
+  './js/views/shopping.js',
+  './js/views/itinerary.js',
+  './js/views/meals.js',
+  './js/views/expenses.js',
+  './js/views/places.js',
+];

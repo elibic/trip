@@ -122,6 +122,15 @@ a { color: var(--primary); text-decoration: none; }
   display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0;
 }
 
+.list-item.flash {
+  animation: flashRow 1.5s ease-out;
+  border-radius: 10px;
+}
+@keyframes flashRow {
+  0%, 55% { background: var(--warn-bg); }
+  100% { background: transparent; }
+}
+
 /* ===== שורת הוספה מהירה ===== */
 .add-row {
   display: flex; align-items: center; gap: 10px;

@@ -1,9 +1,9 @@
 import {
-  el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab, focusQuickAdd,
+  el, openModal, confirmDialog, toast, famChip, quickAddRow, addFab, focusQuickAdd, flashItem,
 } from '../ui.js';
 import {
   addShoppingItem, updateShoppingItem, deleteShoppingItem,
-  setBought, claimShopping, clearBoughtItems, moveShoppingToGear,
+  setBought, claimShopping, clearBoughtItems, moveShoppingToGear, findByName, normalizeName,
 } from '../store.js';
 import {
   SHOPPING_CATEGORIES, knownCategories, groupByCategory, categoryChip,
@@ -44,9 +44,19 @@ export function renderShopping(view, ctx) {
   const addKey = `shopping-${tripId}`;
   const card = el('div', { class: 'card' });
 
+  const addedNow = new Set();   // תופס כפילויות גם בתוך הדבקה אחת
   const addRow = quickAddRow(addKey, {
     placeholder: addState.category ? `הוספה ל${addState.category}…` : 'פיתות, גחלים, מים…',
-    onAdd: (name) => addShoppingItem(tripId, { name, category: addState.category || null }),
+    onAdd: (name) => {
+      const existing = findByName(items, name);
+      if (existing || addedNow.has(normalizeName(name))) {
+        toast(`"${name}" כבר ברשימה`);
+        if (existing) flashItem(existing[0]);
+        return undefined;
+      }
+      addedNow.add(normalizeName(name));
+      return addShoppingItem(tripId, { name, category: addState.category || null });
+    },
   });
   addRow.append(addTargetChip({
     state: addState, categories, suggestions: SHOPPING_CATEGORIES,
@@ -106,7 +116,7 @@ export function renderShopping(view, ctx) {
       onPick: (picked) => updateShoppingItem(tripId, itemId, { category: picked || null }),
     });
 
-    return el('div', { class: `list-item${item.bought ? ' done' : ''}` },
+    return el('div', { class: `list-item${item.bought ? ' done' : ''}`, dataset: { id: itemId } },
       el('button', {
         class: `bigcheck${item.bought ? ' on' : ''}`, 'aria-label': 'נקנה',
         onclick: () => setBought(tripId, itemId, !item.bought),

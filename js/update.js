@@ -1,6 +1,7 @@
 /* בדיקת גרסה חדשה + רענון עמוק (ניקוי Service Worker ומטמון) */
 import { el, openModal } from './ui.js';
 import { APP_VERSION } from './version.js';
+import { APP_ASSETS } from './assets.js';
 
 const DISMISS_KEY = 'trip.updateDismissed';
 const RENAG_HOURS = 6;
@@ -71,18 +72,25 @@ function showUpdateModal(info) {
   async function update() {
     button.disabled = true;
     button.textContent = 'מעדכנים…';
+    // אם משום מה הרענון לא יפתור את הפער, שלא נציק שוב מיד
+    rememberDismissal(info.version);
     await hardRefresh();
   }
 
   function later() {
-    try {
-      localStorage.setItem(DISMISS_KEY, JSON.stringify({ version: info.version, at: Date.now() }));
-    } catch { /* אין localStorage — פשוט נשאל שוב בפעם הבאה */ }
+    rememberDismissal(info.version);
     close();
   }
 }
 
-/* רענון עמוק: הסרת Service Worker, מחיקת כל המטמונים, וטעינה מחדש מהרשת */
+function rememberDismissal(version) {
+  try {
+    localStorage.setItem(DISMISS_KEY, JSON.stringify({ version, at: Date.now() }));
+  } catch { /* אין localStorage — פשוט נשאל שוב בפעם הבאה */ }
+}
+
+/* רענון עמוק: הסרת Service Worker, מחיקת כל המטמונים, ריקון מטמון ה-HTTP,
+   וטעינה מחדש מהרשת */
 export async function hardRefresh() {
   try {
     if ('serviceWorker' in navigator) {
@@ -96,6 +104,15 @@ export async function hardRefresh() {
       const keys = await caches.keys();
       await Promise.all(keys.map((k) => caches.delete(k)));
     }
+  } catch { /* ממשיכים גם אם נכשל */ }
+
+  // מחיקת ה-Service Worker והמטמון שלו לא נוגעת במטמון ה-HTTP של הדפדפן,
+  // ושם נשמרים קבצי ה-JS. משיכה מחדש עם cache:'reload' מחליפה אותם בגרסה טרייה.
+  try {
+    await Promise.race([
+      Promise.allSettled(APP_ASSETS.map((url) => fetch(url, { cache: 'reload' }))),
+      new Promise((resolve) => setTimeout(resolve, 8000)),
+    ]);
   } catch { /* ממשיכים גם אם נכשל */ }
 
   // חותמת זמן בכתובת כדי לעקוף גם את המטמון של הדפדפן עצמו
