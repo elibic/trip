@@ -1,26 +1,11 @@
-// ===================================================================
-//  הגדרות Firebase — הדביקו כאן!
-// ===================================================================
-//  1. היכנסו ל: https://console.firebase.google.com
-//  2. פתחו את הפרויקט שלכם → ⚙️ Project settings → Your apps
-//  3. העתיקו את האובייקט firebaseConfig והדביקו אותו כאן במקום ה-null
-//
-//  ⚠️ חשוב: ודאו שיש שורת databaseURL! אם היא חסרה, העתיקו את הכתובת
-//  מהכותרת של עמוד ה-Realtime Database (נראית כמו:
-//  https://XXXX-default-rtdb.europe-west1.firebasedatabase.app)
-//  והוסיפו אותה לאובייקט.
-//
-//  דוגמה לצורה הסופית:
-//
-//  export const firebaseConfig = {
-//    apiKey: "AIzaSy....",
-//    authDomain: "family-trips-xxxx.firebaseapp.com",
-//    databaseURL: "https://family-trips-xxxx-default-rtdb.europe-west1.firebasedatabase.app",
-//    projectId: "family-trips-xxxx",
-//    storageBucket: "family-trips-xxxx.appspot.com",
-//    messagingSenderId: "123456789",
-//    appId: "1:123456789:web:abcdef"
-//  };
-// ===================================================================
-
-export const firebaseConfig = null;
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyDo4aJfLI4NDSH-yJzm_QhG8FLoWmmv-AY",
+  authDomain: "family-trips-swb.firebaseapp.com",
+  databaseURL: "https://family-trips-swb-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "family-trips-swb",
+  storageBucket: "family-trips-swb.firebasestorage.app",
+  messagingSenderId: "521498659802",
+  appId: "1:521498659802:web:a09f5c72f153efd041cee3",
+  measurementId: "G-QK8GR3LP21"
+};
