@@ -1,18 +1,17 @@
 import { el, clear, openModal, toast } from '../ui.js';
 import { addStop, updateStop, currentTrip, tripDays, dayLabel, IDEAS_DAY } from '../store.js';
 import {
-  CATEGORIES, searchPlaces, nearbyPlaces, fmtDistance,
+  CATEGORIES, AROUND_CATEGORY, searchPlaces, nearbyPlaces, fmtDistance,
   googleEmbedUrl, googleMapsUrl,
 } from '../places.js';
 
 /* מסך חיפוש מקומות עם מפת גוגל מוטמעת.
-   pickFor (אופציונלי): { dayKey, stopId } — עדכון מיקום לעצירה קיימת במקום הוספה חדשה. */
+   נפתח ישר עם מקומות באזור, ומאפשר גם הוספה חופשית של מה שלא נמצא במפה.
+   pickFor (אופציונלי): { dayKey, stopId } — עדכון מיקום לעצירה קיימת. */
 export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
   const days = [IDEAS_DAY, ...tripDays(trip.meta)];
   let targetDay = dayKey || days[1] || IDEAS_DAY;
-  let anchor = firstKnownPoint(trip, dayKey);  // נקודת ייחוס לחיפוש "באזור"
-  let selected = null;
-  let activeCat = null;
+  let anchor = firstKnownPoint(trip, dayKey);
 
   /* ---------- אלמנטים ---------- */
 
@@ -27,21 +26,25 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); runSearch(); }
   });
+  searchInput.addEventListener('input', updateFreeAdd);
 
   const chipsRow = el('div', { class: 'map-chips' },
-    CATEGORIES.map((cat) => el('button', {
+    el('button', { class: 'map-chip locate', onclick: locateMe }, '📍 סביבי'),
+    [AROUND_CATEGORY, ...CATEGORIES].map((cat) => el('button', {
       class: 'map-chip', dataset: { key: cat.key },
       onclick: () => runNearby(cat),
-    }, cat.label)));
+    }, cat.label)),
+  );
 
   const mapBox = el('div', { class: 'map-box' });
-  const listBox = el('div', { class: 'places-list' });
   const statusBox = el('div', { class: 'places-status' });
+  const freeAddBox = el('div', { class: 'free-add', hidden: true });
+  const listBox = el('div', { class: 'places-list' });
 
   const { close } = openModal(null, el('div', { class: 'map-screen' },
     el('div', { class: 'map-head' },
       el('button', { class: 'icon-btn', 'aria-label': 'סגירה', onclick: () => close() }, '✕'),
-      el('div', { class: 'title' }, pickFor ? 'בחירת מיקום' : 'חיפוש מקומות'),
+      el('div', { class: 'title' }, pickFor ? 'בחירת מיקום' : 'הוספת מקום'),
       pickFor ? null : daySelect,
     ),
     el('div', { class: 'map-search' }, searchInput,
@@ -49,13 +52,43 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
     chipsRow,
     mapBox,
     statusBox,
+    freeAddBox,
     listBox,
   ), { className: 'full' });
 
   showMap(anchor);
-  renderIdleHint();
+  start();
 
-  /* ---------- פעולות ---------- */
+  /* ---------- פתיחה ---------- */
+
+  function start() {
+    if (anchor) {
+      runNearby(AROUND_CATEGORY);
+    } else {
+      setStatus('hint', 'חפשו אזור בשם שלו, או לחצו "📍 סביבי" כדי לראות מה יש קרוב אליכם');
+      renderIdleHint();
+    }
+  }
+
+  function locateMe() {
+    if (!navigator.geolocation) {
+      setStatus('error', 'המכשיר לא תומך באיתור מיקום — חפשו אזור בשם שלו');
+      return;
+    }
+    setActiveChip('locate');
+    setStatus('spinner', 'מאתרים את המיקום שלכם…');
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        anchor = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        showMap({ ...anchor, name: 'המיקום שלכם' });
+        runNearby(AROUND_CATEGORY);
+      },
+      () => setStatus('hint', 'לא הצלחנו לאתר את המיקום — חפשו אזור בשם שלו'),
+      { timeout: 10000, maximumAge: 300000 },
+    );
+  }
+
+  /* ---------- חיפוש ---------- */
 
   async function runSearch() {
     const q = searchInput.value.trim();
@@ -65,7 +98,11 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
     setStatus('spinner', `מחפשים "${q}"…`);
     try {
       const results = await searchPlaces(q, anchor);
-      if (!results.length) { setStatus('empty', `לא נמצאו תוצאות עבור "${q}"`); clear(listBox); return; }
+      if (!results.length) {
+        clear(listBox);
+        setStatus('empty', `לא נמצא "${q}" במפה — אפשר להוסיף אותו כמו שכתבתם 👇`);
+        return;
+      }
       anchor = { lat: results[0].lat, lng: results[0].lng };
       select(results[0]);
       renderResults(results, { showDistance: false });
@@ -77,7 +114,7 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
 
   async function runNearby(cat) {
     if (!anchor) {
-      setStatus('hint', 'קודם חפשו אזור (למשל "טבריה") ואז בחרו קטגוריה');
+      setStatus('hint', 'קודם חפשו אזור (למשל "טבריה") או לחצו "📍 סביבי"');
       searchInput.focus();
       return;
     }
@@ -86,20 +123,23 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
     try {
       const results = await nearbyPlaces(cat, anchor);
       renderResults(results, { showDistance: true });
-      setStatus(results.length ? null : 'empty', results.length ? '' : `לא נמצאו ${cat.label} באזור הזה`);
+      if (results.length) setStatus(null);
+      else setStatus('empty', `לא נמצאו ${cat.label} באזור הזה — נסו קטגוריה אחרת או חיפוש בשם`);
     } catch {
       setStatus('error', 'החיפוש באזור נכשל — נסו שוב בעוד רגע');
     }
   }
 
+  /* ---------- הוספה ---------- */
+
   function select(place) {
-    selected = place;
     showMap(place);
     mapBox.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
   async function addPlace(place) {
     if (pickFor) {
+      if (!place.lat) { toast('בחרו מקום מהמפה כדי לסמן מיקום'); return; }
       await updateStop(tripId, pickFor.dayKey, pickFor.stopId, {
         place: place.name, lat: place.lat, lng: place.lng,
       });
@@ -107,13 +147,37 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
       close();
       return;
     }
+
     const stops = currentTrip()?.itinerary?.[targetDay]?.stops || {};
     const maxOrder = Math.max(0, ...Object.values(stops).map((s) => s.order || 0));
     await addStop(tripId, targetDay, {
-      title: place.name, place: place.name,
-      lat: place.lat, lng: place.lng, order: maxOrder + 10,
+      title: place.name,
+      place: place.lat ? place.name : null,
+      lat: place.lat ?? null,
+      lng: place.lng ?? null,
+      order: maxOrder + 10,
     });
     toast(`"${place.name}" נוסף ל${dayLabel(targetDay)} ✅`);
+  }
+
+  function addFreeText() {
+    const text = searchInput.value.trim();
+    if (!text) return;
+    addPlace({ name: text });
+    searchInput.value = '';
+    updateFreeAdd();
+  }
+
+  function updateFreeAdd() {
+    const text = searchInput.value.trim();
+    freeAddBox.hidden = !text || !!pickFor;
+    clear(freeAddBox);
+    if (freeAddBox.hidden) return;
+    freeAddBox.append(el('button', { class: 'free-add-btn', onclick: addFreeText },
+      el('span', {}, '＋'),
+      el('span', { class: 'grow' }, `הוספה כמו שכתבתם: "${text}"`),
+      el('span', { class: 'to' }, dayLabel(targetDay)),
+    ));
   }
 
   /* ---------- תצוגה ---------- */
@@ -123,19 +187,19 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
     if (!place) {
       mapBox.append(el('div', { class: 'map-placeholder' },
         el('div', { style: 'font-size:38px' }, '🗺️'),
-        el('div', {}, 'חפשו מקום כדי לראות אותו על המפה')));
+        el('div', {}, 'חפשו מקום או אזור כדי לראות אותו על המפה')));
       return;
     }
-    mapBox.append(
-      el('iframe', {
-        src: googleEmbedUrl(place), title: 'מפה', loading: 'lazy',
-        referrerpolicy: 'no-referrer-when-downgrade', allowfullscreen: true,
-      }),
-      place.name ? el('div', { class: 'map-caption' },
+    mapBox.append(el('iframe', {
+      src: googleEmbedUrl(place), title: 'מפה', loading: 'lazy',
+      referrerpolicy: 'no-referrer-when-downgrade', allowfullscreen: true,
+    }));
+    if (place.name) {
+      mapBox.append(el('div', { class: 'map-caption' },
         el('span', { class: 'nm' }, `📍 ${place.name}`),
         el('a', { href: googleMapsUrl(place), target: '_blank', rel: 'noopener' }, 'פתיחה בגוגל מפות ↗'),
-      ) : null,
-    );
+      ));
+    }
   }
 
   function renderResults(results, { showDistance }) {
@@ -148,7 +212,7 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
             showDistance && place.distance != null ? `${fmtDistance(place.distance)} · ` : '',
             place.address || ''),
         ),
-        el('button', { class: 'btn small', onclick: (e) => { e.stopPropagation(); addPlace(place); } },
+        el('button', { class: 'btn small', onclick: () => addPlace(place) },
           pickFor ? 'בחירה' : '＋ הוספה'),
       ));
     }
@@ -157,13 +221,14 @@ export function openPlaceSearch({ tripId, trip, dayKey, pickFor }) {
   function renderIdleHint() {
     clear(listBox);
     listBox.append(el('p', { class: 'list-hint' },
-      '💡 חפשו מקום בשמו, או חפשו אזור (עיר/יישוב) ואז בחרו קטגוריה כדי לגלות מה יש בסביבה.'));
+      '💡 אפשר לחפש מקום בשמו, לגלות מה יש באזור לפי קטגוריה, ',
+      'או פשוט לכתוב בשורת החיפוש ולהוסיף כטקסט חופשי.'));
   }
 
   function setActiveChip(key) {
-    activeCat = key;
     chipsRow.querySelectorAll('.map-chip').forEach((c) => {
-      c.classList.toggle('active', c.dataset.key === key);
+      const chipKey = c.dataset.key || (c.classList.contains('locate') ? 'locate' : null);
+      c.classList.toggle('active', chipKey === key);
     });
   }
 

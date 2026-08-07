@@ -6,6 +6,16 @@
 const NOMINATIM = 'https://nominatim.openstreetmap.org/search';
 const OVERPASS = 'https://overpass-api.de/api/interpreter';
 
+// ברירת המחדל שנטענת מיד עם פתיחת המפה — כל מה שמעניין בטיול משפחתי
+export const AROUND_CATEGORY = {
+  key: 'around', label: '✨ מה יש באזור',
+  filters: [
+    '["tourism"~"^(attraction|viewpoint|museum|zoo|theme_park|picnic_site)$"]',
+    '["natural"~"^(beach|spring|waterfall)$"]',
+    '["leisure"~"^(park|playground|water_park)$"]',
+  ],
+};
+
 export const CATEGORIES = [
   { key: 'food', label: '🍽️ אוכל', filters: ['["amenity"~"^(restaurant|cafe|fast_food|ice_cream)$"]'] },
   { key: 'beach', label: '🏖️ חופים', filters: ['["natural"="beach"]', '["leisure"="beach_resort"]'] },

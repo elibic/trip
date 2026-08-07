@@ -1,6 +1,6 @@
-import { el, openModal, confirmDialog, toast, quickAddRow } from '../ui.js';
+import { el, openModal, confirmDialog, toast } from '../ui.js';
 import {
-  addStop, updateStop, deleteStop, swapStops, moveStop,
+  updateStop, deleteStop, swapStops, moveStop,
   tripDays, fmtDay, dayLabel, IDEAS_DAY,
 } from '../store.js';
 import { openPlaceSearch } from './places.js';
@@ -15,11 +15,6 @@ export function renderItinerary(view, ctx) {
   const extraDays = Object.keys(itinerary)
     .filter((d) => d !== IDEAS_DAY && !days.includes(d)).sort();
 
-  view.append(el('button', {
-    class: 'btn secondary block search-places-btn',
-    onclick: () => openPlaceSearch({ tripId, trip, dayKey: days[0] }),
-  }, '🔍 חיפוש מקומות על המפה'));
-
   view.append(ideasCard());
 
   for (const dayKey of [...days, ...extraDays]) {
@@ -32,23 +27,13 @@ export function renderItinerary(view, ctx) {
     const stops = sortedStops(IDEAS_DAY);
 
     const card = el('div', { class: 'card day-card ideas-card' },
-      el('div', { class: 'day-head ideas' },
-        el('span', { class: 'd' }, '💡 רעיונות'),
-        el('button', {
-          class: 'btn ghost small',
-          onclick: () => openPlaceSearch({ tripId, trip, dayKey: IDEAS_DAY }),
-        }, '🔍 מפה'),
-      ),
+      el('div', { class: 'day-head ideas' }, el('span', { class: 'd' }, '💡 רעיונות')),
       el('div', { class: 'ideas-hint' },
         'מקומות שאתם שוקלים — בלי לשייך ליום. אפשר לשבץ ליום בכל שלב.'),
     );
 
     for (const [stopId, stop] of stops) card.append(ideaRow(stopId, stop));
-
-    card.append(quickAddRow(`stop-${tripId}-${IDEAS_DAY}`, {
-      placeholder: 'רעיון למקום או פעילות…',
-      onAdd: (title) => addStop(tripId, IDEAS_DAY, { title, order: nextOrder(stops) }),
-    }));
+    card.append(addRow(IDEAS_DAY, 'הוספת רעיון…'));
 
     return card;
   }
@@ -98,6 +83,18 @@ export function renderItinerary(view, ctx) {
     }
   }
 
+  /* שורת ההוספה — נפתחת ישר במפה עם המקומות שבאזור */
+  function addRow(dayKey, label) {
+    return el('button', {
+      class: 'add-row add-row-btn',
+      onclick: () => openPlaceSearch({ tripId, trip, dayKey }),
+    },
+      el('span', { class: 'plus' }, '＋'),
+      el('span', { class: 'add-label' }, label),
+      el('span', { class: 'map-hint' }, '🗺️'),
+    );
+  }
+
   function sortedStops(dayKey) {
     return Object.entries(itinerary[dayKey]?.stops || {})
       .sort((a, b) => (a[1].order || 0) - (b[1].order || 0));
@@ -117,10 +114,6 @@ export function renderItinerary(view, ctx) {
         routeUrl ? el('a', {
           class: 'btn ghost small', href: routeUrl, target: '_blank', rel: 'noopener',
         }, '🧭 מסלול היום') : null,
-        el('button', {
-          class: 'btn ghost small',
-          onclick: () => openPlaceSearch({ tripId, trip, dayKey }),
-        }, '🔍 מפה'),
       ),
     );
 
@@ -128,10 +121,7 @@ export function renderItinerary(view, ctx) {
       card.append(stopRow(dayKey, stopId, stop, i, stops));
     });
 
-    card.append(quickAddRow(`stop-${tripId}-${dayKey}`, {
-      placeholder: 'הוספת עצירה…',
-      onAdd: (title) => addStop(tripId, dayKey, { title, order: nextOrder(stops) }),
-    }));
+    card.append(addRow(dayKey, 'הוספת עצירה…'));
 
     return card;
   }

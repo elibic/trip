@@ -396,7 +396,28 @@ a { color: var(--primary); text-decoration: none; }
 .stop .side button:disabled { opacity: .25; }
 
 /* ===== מסך חיפוש מקומות ===== */
-.search-places-btn { margin-bottom: 14px; }
+.add-row-btn { width: 100%; text-align: start; }
+.add-row-btn .add-label { flex: 1; color: #9aa5a2; font-size: 15.5px; }
+.add-row-btn .map-hint { font-size: 17px; opacity: .75; flex-shrink: 0; }
+.add-row-btn:active { background: #f5f8f7; border-radius: 10px; }
+
+.free-add { flex-shrink: 0; }
+.free-add-btn {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 13px 14px; text-align: start;
+  background: var(--warn-bg); color: var(--warn-text);
+  font-size: 14px; font-weight: 700;
+  border-bottom: 1px solid #f3e2b0;
+}
+.free-add-btn .grow {
+  flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.free-add-btn .to {
+  font-size: 11.5px; font-weight: 700; background: rgba(255,255,255,.65);
+  border-radius: 99px; padding: 3px 9px; flex-shrink: 0;
+}
+.map-chip.locate { background: var(--primary-light); color: var(--primary-dark); font-weight: 700; }
+.map-chip.locate.active { background: var(--primary); color: #fff; }
 
 .modal.full {
   border-radius: 0; max-width: none; width: 100%;
