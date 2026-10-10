@@ -1,15 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="22" fill="#fff"/><g transform="translate(6 3) scale(.88)"><g fill="none" stroke-linecap="round" stroke-linejoin="round">
-    <g stroke="#f59e0b" stroke-width="4.6">
-      <path d="M50 24.5V17M65.6 30.4l5-5M34.4 30.4l-5-5M74.5 39.5h7M18.5 39.5h7"/>
-      <path d="M33 46a17 17 0 0 1 34 0"/>
-    </g>
-    <g stroke="#0f3d72" stroke-width="4.4" fill="#fff">
-      <path d="M50 38 76 49 50 60 24 49Z"/>
-      <path d="M24 49v28l26 14 26-14V49"/>
-      <path d="M50 60v31M37 43.5l26 11" fill="none"/>
-    </g>
-    <path d="M58.5 61.5 69 59.5l14.5 16.5a3 3 0 0 1-.2 4.2l-6 5.6a3 3 0 0 1-4.3-.2L59.5 70.5Z" fill="#fff" stroke="#fff" stroke-width="9"/>
-    <path d="M58.5 61.5 69 59.5l14.5 16.5a3 3 0 0 1-.2 4.2l-6 5.6a3 3 0 0 1-4.3-.2L59.5 70.5Z" fill="#fff" stroke="#f59e0b" stroke-width="3.8"/>
-    <circle cx="65.2" cy="66" r="2.4" fill="#0f3d72"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="440 67 800 800" fill="none"><rect x="440" y="67" width="800" height="800" rx="176" fill="#fff"/><defs>
+    <mask id="tag-clearance" maskUnits="userSpaceOnUse" x="0" y="0" width="1680" height="945">
+      <rect width="1680" height="945" fill="white"/>
+      <path d="m953 507 73 13a22 22 0 0 1 13 7l85 99a24 24 0 0 1-2 34l-57 55a24 24 0 0 1-34-2l-88-101a24 24 0 0 1-6-18l3-71Z"
+            fill="black" stroke="black" stroke-width="66" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <!-- Sun -->
+  <g stroke="#FF9D00">
+    <path d="M692 388a146 146 0 0 1 288 0" stroke-width="46"/>
+    <path d="M840 142v58M657 210l41 42M577 352h63M1025 210l-41 42M1041 352h63"
+          stroke-width="30" stroke-linecap="round"/>
   </g>
-</g></svg>
+  <!-- Shipping box -->
+  <g mask="url(#tag-clearance)">
+  <path d="M612 458 840 370 1068 458v199L840 790 612 657Z"
+        stroke="#083B68" stroke-width="32" stroke-linejoin="round"/>
+  <g stroke="#083B68" stroke-width="32" stroke-linejoin="round">
+    <path d="m612 458 228 93 228-93M840 551v239"/>
+    <path d="m723 505 214-95"/>
+  </g>
+  </g>
+  <!-- Price tag -->
+  <path d="m953 507 73 13a22 22 0 0 1 13 7l85 99a24 24 0 0 1-2 34l-57 55a24 24 0 0 1-34-2l-88-101a24 24 0 0 1-6-18l3-71Z"
+        stroke="#FF9D00" stroke-width="29" stroke-linejoin="round"/>
+  <circle cx="999" cy="576" r="22" fill="#083B68"/>
+</svg>

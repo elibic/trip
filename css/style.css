@@ -40,12 +40,12 @@
 
   /* From the logo: navy box, orange sun. Navy carries actions; orange is the
      sun and the one call to action (Post). */
-  --accent: #0f3d72;
-  --accent-ink: #0c3260;
-  --accent-soft: rgba(15, 61, 114, .10);
+  --accent: #083b68;
+  --accent-ink: #06304f;
+  --accent-soft: rgba(8, 59, 104, .10);
   --on-accent: #ffffff;
-  --hero-a: #0a2a50;
-  --hero-b: #0f3d72;
+  --hero-a: #052848;
+  --hero-b: #083b68;
   --hero-c: #2f6fb5;
   --on-hero: #ffffff;
   --on-hero-dim: rgba(255, 255, 255, .76);
@@ -53,9 +53,9 @@
   --good: #2f7d5f; --good-soft: rgba(47, 125, 95, .12);
   --warn: #8f5a06; --warn-soft: rgba(178, 106, 12, .13);
   --bad: #c0453f;  --bad-soft: rgba(192, 69, 63, .12);
-  --sun: #f59e0b;
-  --sun-2: #ea7a0c;
-  --on-sun: #0f3d72;
+  --sun: #ff9d00;
+  --sun-2: #f08400;
+  --on-sun: #083b68;
 
   --shadow-sm: 0 1px 2px rgba(12, 30, 55, .05);
   --shadow: 0 1px 2px rgba(12, 30, 55, .03), 0 10px 30px -6px rgba(12, 30, 55, .12);
@@ -77,12 +77,12 @@
     --ink: #f2f5fb; --ink-2: #c8d1e2; --muted: #aab3c2;
     --line: rgba(255, 255, 255, .12); --line-strong: rgba(255, 255, 255, .22);
     --accent: #8bb8ef; --accent-ink: #a9cbf5; --accent-soft: rgba(139, 184, 239, .14); --on-accent: #06162b;
-    --hero-a: #071a33; --hero-b: #0f3d72; --hero-c: #1f5a9e;
+    --hero-a: #071a33; --hero-b: #083b68; --hero-c: #1f5a9e;
     --on-hero: #f2f7ff; --on-hero-dim: rgba(242, 247, 255, .72);
     --good: #56c096; --good-soft: rgba(86, 192, 150, .14);
     --warn: #d8a445; --warn-soft: rgba(216, 164, 69, .14);
     --bad: #f08d86; --bad-soft: rgba(240, 141, 134, .14);
-    --sun: #f59e0b; --sun-2: #ea7a0c; --on-sun: #0a2a50;
+    --sun: #ff9d00; --sun-2: #f08400; --on-sun: #0a2a50;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
     --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -6px rgba(0, 0, 0, .55);
     --shadow-lg: 0 14px 50px -8px rgba(0, 0, 0, .7);
@@ -99,12 +99,12 @@
   --ink: #f2f5fb; --ink-2: #c8d1e2; --muted: #aab3c2;
   --line: rgba(255, 255, 255, .12); --line-strong: rgba(255, 255, 255, .22);
   --accent: #8bb8ef; --accent-ink: #a9cbf5; --accent-soft: rgba(139, 184, 239, .14); --on-accent: #06162b;
-  --hero-a: #071a33; --hero-b: #0f3d72; --hero-c: #1f5a9e;
+  --hero-a: #071a33; --hero-b: #083b68; --hero-c: #1f5a9e;
   --on-hero: #f2f7ff; --on-hero-dim: rgba(242, 247, 255, .72);
   --good: #56c096; --good-soft: rgba(86, 192, 150, .14);
   --warn: #d8a445; --warn-soft: rgba(216, 164, 69, .14);
   --bad: #f08d86; --bad-soft: rgba(240, 141, 134, .14);
-  --sun: #f59e0b; --sun-2: #ea7a0c; --on-sun: #0a2a50;
+  --sun: #ff9d00; --sun-2: #f08400; --on-sun: #0a2a50;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, .5);
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -6px rgba(0, 0, 0, .55);
   --shadow-lg: 0 14px 50px -8px rgba(0, 0, 0, .7);
@@ -588,4 +588,4 @@ a.chip, a.btn { text-decoration: none; }
 .hero-card .hero-value, .hero-card .hero-motto { padding-inline-end: 72px; }
 .brand { flex: 0 1 auto; }
 .brand .meta { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-@media (max-width: 400px) { .brand .meta { display: none; } }
+@media (max-width: 350px) { .brand .meta { display: none; } }

@@ -1,6 +1,6 @@
 // Network first for the app's own files, cache as the offline fallback.
 // Firestore keeps its own offline cache; this only covers the shell.
-const CACHE = 'shell-v2';
+const CACHE = 'shell-v3';
 const SHELL = ['./', 'index.html', 'css/style.css', 'fonts/rubik-hebrew.woff2', 'fonts/rubik-latin.woff2', 'icons/logo.svg', 'manifest.webmanifest'];
 
 self.addEventListener('install', (e) => {
