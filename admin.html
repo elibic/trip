@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#f2f0eb" id="tc">
+  <link rel="icon" href="icons/logo.svg" type="image/svg+xml">
+  <title>ניהול - דנדשמש</title>
+  <script>
+    try {
+      var t = localStorage.getItem('nus-theme'); if (t) document.documentElement.setAttribute('data-theme', t);
+      document.documentElement.lang = 'he'; document.documentElement.dir = 'rtl';
+    } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { padding-bottom: 40px; }
+    .atabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 4px 0 12px; }
+    .atabs::-webkit-scrollbar { display: none; }
+    .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .kpi { background: var(--surface-2); border-radius: 16px; padding: 12px 14px; }
+    .kpi span { display: block; font-size: 12px; color: var(--muted); }
+    .kpi b { font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
+    .arow { display: flex; align-items: center; gap: 10px; padding: 10px 2px; border-top: 1px solid var(--line); flex-wrap: wrap; }
+    .arow:first-child { border-top: 0; }
+    .arow .main { flex: 1; min-width: 180px; }
+    .arow .t1 { font-weight: 550; }
+    .arow .t2 { font-size: 12px; color: var(--muted); }
+    .arow .acts { display: flex; gap: 6px; flex-wrap: wrap; }
+    .arow img { width: 46px; height: 56px; object-fit: cover; border-radius: 10px; flex: none; }
+    .ledit { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; padding: 6px 0; border-top: 1px solid var(--line); }
+    .ledit input { padding: 9px 11px; border-radius: 11px; border: 1px solid var(--glass-line); background: var(--glass-solid); min-width: 0; }
+    .ledit .acts { display: flex; gap: 4px; }
+    .ledit.off input { opacity: .5; text-decoration: line-through; }
+    .tools { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 10px; }
+    .tools input, .tools select { padding: 9px 12px; border-radius: 12px; border: 1px solid var(--glass-line); background: var(--glass-solid); }
+    .tools input { flex: 1; min-width: 160px; }
+  </style>
+</head>
+<body>
+  <header class="topbar" id="topbar">
+    <div class="shell">
+      <a class="logo" href="index.html" aria-label="app">
+        <img src="icons/logo.svg" alt="" width="36" height="36">
+      </a>
+      <div class="brand"><h1>ניהול</h1><div class="meta" id="who"></div></div>
+      <div class="spacer"></div>
+      <a class="btn sm secondary" id="back" href="index.html">לאפליקציה</a>
+    </div>
+  </header>
+  <main class="shell" id="app" style="max-width:980px"><div class="card"><div class="sk big"></div></div></main>
+  <div class="backdrop" id="backdrop"></div>
+  <aside class="sheet" id="sheet" role="dialog" aria-modal="true"></aside>
+  <div class="toast" id="toast" role="status"></div>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>

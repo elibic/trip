@@ -1,0 +1,18 @@
+{
+  "indexes": [
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "live", "order": "ASCENDING" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "live", "order": "ASCENDING" }, { "fieldPath": "promoUntil", "order": "ASCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "cat", "order": "ASCENDING" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "who", "order": "ASCENDING" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "age", "order": "ASCENDING" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "cond", "order": "ASCENDING" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "source", "order": "ASCENDING" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "hood", "order": "ASCENDING" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "price", "order": "ASCENDING" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] },
+    { "collectionGroup": "listings", "queryScope": "COLLECTION", "fields": [ { "fieldPath": "kw", "arrayConfig": "CONTAINS" }, { "fieldPath": "postedAt", "order": "DESCENDING" } ] }
+  ],
+  "fieldOverrides": [
+    { "collectionGroup": "listings", "fieldPath": "thumb", "indexes": [] },
+    { "collectionGroup": "photos", "fieldPath": "list", "indexes": [] }
+  ]
+}

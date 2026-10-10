@@ -1,0 +1,223 @@
+rules_version = '2';
+
+// Security rules. Everything is denied unless a rule below opens it.
+// The admins list lives in the document config/admins ({ emails: [...] }),
+// created once by hand in the Firebase console (see README). No email is
+// written in this file, so the repository can stay public.
+
+service cloud.firestore {
+  match /databases/{db}/documents {
+
+    // ------------------------------------------------------------ helpers
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function isAdmin() {
+      return verified()
+        && exists(/databases/$(db)/documents/config/admins)
+        && request.auth.token.email in get(/databases/$(db)/documents/config/admins).data.emails;
+    }
+    function notBlocked() { return !exists(/databases/$(db)/documents/blocked/$(me())); }
+    function nowMs() { return request.time.toMillis(); }
+    function near(t) { return t is int && t > nowMs() - 600000 && t < nowMs() + 600000; }
+    function str(v, max) { return v is string && v.size() <= max; }
+    function nestr(v, max) { return v is string && v.size() > 0 && v.size() <= max; }
+    function bi(m, max) {
+      return m is map && m.keys().hasOnly(['he', 'en'])
+        && str(m.get('he', ''), max) && str(m.get('en', ''), max);
+    }
+    function biRequired(m, max) {
+      return bi(m, max) && (m.get('he', '').size() > 0 || m.get('en', '').size() > 0);
+    }
+    function DAY() { return 86400000; }
+
+    // ------------------------------------------------------------ config
+    match /config/lists {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /config/admins {
+      allow read, write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------ listings
+    function listingShape(d) {
+      return d.keys().hasOnly(['ownerUid', 'ownerName', 'lang', 'translated', 'title', 'problemText', 'desc',
+                               'cat', 'who', 'age', 'cond', 'source', 'sourceOther', 'size', 'problem',
+                               'price', 'origPrice', 'link', 'hood', 'contact', 'thumb', 'photoCount',
+                               'status', 'live', 'postedAt', 'expiresAt', 'promoUntil', 'views', 'kw'])
+        && nestr(d.ownerName, 60)
+        && d.lang in ['he', 'en']
+        && d.translated is bool
+        && biRequired(d.title, 120)
+        && biRequired(d.problemText, 700)
+        && bi(d.desc, 1000)
+        && d.cat in ['clothes', 'shoes', 'toys', 'electronics', 'home', 'other']
+        && d.who in ['women', 'men', 'girls', 'boys', 'baby', 'unisex', 'na']
+        && d.age in ['a0', 'a2', 'a6', 'a12', 'adult', 'na']
+        && d.cond in ['tag', 'notag', 'once']
+        && d.problem in ['big', 'small', 'color', 'pattern', 'quality', 'dislike', 'other']
+        && nestr(d.source, 40) && str(d.sourceOther, 40) && str(d.size, 40)
+        && d.price is int && d.price >= 0 && d.price <= 100000
+        && d.origPrice is int && d.origPrice >= 0 && d.origPrice <= 100000
+        && str(d.link, 500)
+        && nestr(d.hood, 40)
+        && d.contact is map && d.contact.keys().hasOnly(['msg', 'phone', 'mail'])
+        && d.contact.msg is bool && d.contact.phone is bool && d.contact.mail is bool
+        && (d.contact.msg || d.contact.phone || d.contact.mail)
+        && nestr(d.thumb, 90000)
+        && d.photoCount is int && d.photoCount >= 1 && d.photoCount <= 4
+        && d.status in ['active', 'reserved', 'sold', 'archived', 'hidden']
+        && d.live == (d.status in ['active', 'reserved'])
+        && d.postedAt is int && d.expiresAt is int && d.promoUntil is int && d.views is int
+        && d.kw is list && d.kw.size() <= 250;
+    }
+
+    match /listings/{id} {
+      allow read: if resource.data.live == true
+        || resource.data.status in ['sold', 'archived']
+        || (signedIn() && resource.data.ownerUid == me())
+        || isAdmin();
+
+      allow create: if signedIn() && notBlocked()
+        && listingShape(request.resource.data)
+        && request.resource.data.ownerUid == me()
+        && request.resource.data.status == 'active'
+        && near(request.resource.data.postedAt)
+        && request.resource.data.expiresAt == request.resource.data.postedAt + 30 * DAY()
+        && request.resource.data.promoUntil == 0
+        && request.resource.data.views == 0;
+
+      // The owner edits, changes status, renews. Never un-hides, never promotes.
+      allow update: if signedIn() && notBlocked()
+        && resource.data.ownerUid == me()
+        && resource.data.status != 'hidden'
+        && listingShape(request.resource.data)
+        && request.resource.data.diff(resource.data).unchangedKeys().hasAll(['ownerUid', 'postedAt', 'promoUntil'])
+        && request.resource.data.status != 'hidden'
+        && (request.resource.data.expiresAt == resource.data.expiresAt
+            || (request.resource.data.expiresAt > nowMs() + 29 * DAY() && request.resource.data.expiresAt < nowMs() + 31 * DAY()))
+        && (request.resource.data.views == resource.data.views);
+
+      // Anyone counts a view, one at a time.
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['views'])
+        && request.resource.data.views == resource.data.views + 1;
+
+      // Admins hide, restore, archive and promote.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'live', 'promoUntil', 'expiresAt'])
+        && request.resource.data.status in ['active', 'reserved', 'sold', 'archived', 'hidden']
+        && request.resource.data.live == (request.resource.data.status in ['active', 'reserved'])
+        && request.resource.data.promoUntil is int;
+
+      allow delete: if (signedIn() && resource.data.ownerUid == me()) || isAdmin();
+
+      // Phone and email: only for signed-in people, never for anonymous scrapers.
+      match /private/contact {
+        allow read: if signedIn();
+        allow create, update: if signedIn() && request.resource.data.ownerUid == me()
+          && request.resource.data.keys().hasOnly(['ownerUid', 'phone', 'email'])
+          && str(request.resource.data.phone, 30) && str(request.resource.data.email, 120)
+          && (resource == null || resource.data.ownerUid == me());
+        allow delete: if (signedIn() && resource.data.ownerUid == me()) || isAdmin();
+      }
+    }
+
+    // Full-size photos, apart from the listing so the feed does not download them.
+    match /photos/{id} {
+      allow read: if true;
+      allow create: if signedIn() && notBlocked()
+        && request.resource.data.keys().hasOnly(['ownerUid', 'list'])
+        && request.resource.data.ownerUid == me()
+        && request.resource.data.list is list
+        && request.resource.data.list.size() >= 1 && request.resource.data.list.size() <= 4;
+      allow update: if signedIn() && notBlocked()
+        && resource.data.ownerUid == me()
+        && request.resource.data.ownerUid == me()
+        && request.resource.data.keys().hasOnly(['ownerUid', 'list'])
+        && request.resource.data.list.size() >= 1 && request.resource.data.list.size() <= 4;
+      allow delete: if (signedIn() && resource.data.ownerUid == me()) || isAdmin();
+    }
+
+    // ------------------------------------------------------------ wanted
+    // The document id is the author's uid: one active post per person, by design.
+    match /wanted/{u} {
+      allow read: if true;
+      allow create, update: if signedIn() && me() == u && notBlocked()
+        && request.resource.data.keys().hasOnly(['ownerName', 'lang', 'translated', 'text', 'cat', 'who', 'age', 'hood', 'postedAt', 'expiresAt'])
+        && nestr(request.resource.data.ownerName, 60)
+        && request.resource.data.lang in ['he', 'en']
+        && request.resource.data.translated is bool
+        && biRequired(request.resource.data.text, 200)
+        && request.resource.data.cat in ['clothes', 'shoes', 'toys', 'electronics', 'home', 'other']
+        && request.resource.data.who in ['women', 'men', 'girls', 'boys', 'baby', 'unisex', 'na']
+        && request.resource.data.age in ['a0', 'a2', 'a6', 'a12', 'adult', 'na']
+        && nestr(request.resource.data.hood, 40)
+        && near(request.resource.data.postedAt)
+        && request.resource.data.expiresAt == request.resource.data.postedAt + 14 * DAY();
+      allow delete: if (signedIn() && me() == u) || isAdmin();
+    }
+
+    // ------------------------------------------------------------ users
+    match /users/{u} {
+      allow read: if (signedIn() && me() == u) || isAdmin();
+      allow create, update: if signedIn() && me() == u
+        && request.resource.data.keys().hasOnly(['name', 'email', 'createdAt', 'saved', 'lang'])
+        && nestr(request.resource.data.name, 60)
+        && str(request.resource.data.get('email', ''), 120)
+        && request.resource.data.get('saved', []) is list
+        && request.resource.data.get('saved', []).size() <= 10;
+    }
+
+    match /blocked/{u} {
+      allow read: if (signedIn() && me() == u) || isAdmin();
+      allow write: if isAdmin();
+    }
+
+    // ------------------------------------------------------------ reports
+    match /reports/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['type', 'targetId', 'reason', 'note', 'by', 'at', 'status'])
+        && request.resource.data.type in ['listing', 'wanted', 'user']
+        && nestr(request.resource.data.targetId, 200)
+        && request.resource.data.reason in ['notnew', 'spam', 'wrong', 'offensive', 'other']
+        && str(request.resource.data.note, 500)
+        && request.resource.data.by == me()
+        && near(request.resource.data.at)
+        && request.resource.data.status == 'open';
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ------------------------------------------------------------ messages
+    // A thread is between the owner of a listing (or a wanted post) and one
+    // person writing to them. Its id is "<listingId or w_uid>_<writerUid>".
+    match /threads/{t} {
+      allow read: if signedIn() && me() in resource.data.participants;
+      allow create: if signedIn() && notBlocked()
+        && request.resource.data.keys().hasOnly(['kind', 'refId', 'title', 'owner', 'buyer', 'participants', 'names', 'last', 'lastAt', 'lastBy', 'unread'])
+        && request.resource.data.buyer == me()
+        && request.resource.data.owner != me()
+        && request.resource.data.participants == [request.resource.data.owner, me()]
+        && t == request.resource.data.refId + '_' + me()
+        && bi(request.resource.data.title, 200)
+        && ((request.resource.data.kind == 'listing'
+              && get(/databases/$(db)/documents/listings/$(request.resource.data.refId)).data.ownerUid == request.resource.data.owner)
+            || (request.resource.data.kind == 'wanted'
+              && request.resource.data.refId == 'w_' + request.resource.data.owner
+              && exists(/databases/$(db)/documents/wanted/$(request.resource.data.owner))));
+      allow update: if signedIn() && me() in resource.data.participants
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['last', 'lastAt', 'lastBy', 'unread', 'names'])
+        && str(request.resource.data.last, 200);
+
+      match /messages/{m} {
+        allow read: if signedIn() && me() in get(/databases/$(db)/documents/threads/$(t)).data.participants;
+        allow create: if signedIn() && notBlocked()
+          && me() in getAfter(/databases/$(db)/documents/threads/$(t)).data.participants
+          && request.resource.data.keys().hasOnly(['from', 'text', 'at'])
+          && request.resource.data.from == me()
+          && nestr(request.resource.data.text, 1000)
+          && near(request.resource.data.at);
+      }
+    }
+  }
+}

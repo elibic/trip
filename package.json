@@ -1,0 +1,19 @@
+{
+  "name": "dandashemesh",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test:rules": "firebase emulators:exec --only firestore --project demo-dandash \"node --test tests/rules.test.mjs\"",
+    "test:unit": "node --test tests/text.test.mjs",
+    "test:e2e": "firebase emulators:exec --only firestore,auth --project demo-dandash \"node tests/e2e.mjs\"",
+    "test": "npm run test:unit && npm run test:rules && npm run test:e2e",
+    "dev": "firebase emulators:start --only firestore,auth --project demo-dandash",
+    "deploy:rules": "firebase deploy --only firestore",
+    "deploy": "firebase deploy"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.0",
+    "firebase": "12.19.0",
+    "firebase-tools": "^15.33.0"
+  }
+}

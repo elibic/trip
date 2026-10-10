@@ -1,0 +1,7 @@
+{
+  "version": "0.1.0",
+  "changes": {
+    "he": ["גרסה ראשונה: פיד, פרסום עם תרגום, מחפשים, הודעות, חיפושים שמורים ודף ניהול"],
+    "en": ["First version: feed, posting with translation, wanted, messages, saved searches and admin page"]
+  }
+}
